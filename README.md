@@ -14,9 +14,9 @@ Implementation of commonly used recommendation system algorithm based on spark.
 ### TagPreference
 
 ## Rank Algorithm
+### LRWithFTRL
 ### FM
 ### FFM
-### XGBOOST
 ### LightGBM
 
 
