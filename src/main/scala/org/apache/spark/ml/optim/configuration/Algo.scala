@@ -24,7 +24,7 @@ object Algo extends Enumeration {
   type Algo = Value
   val BinaryClassification, MultinomialClassification, Regression = Value
 
-  private[ml] def fromString(name: String): Algo = name match {
+  def fromString(name: String): Algo = name match {
     case "binary classification" | "Binary Classification" => BinaryClassification
     case "multinomial classification" | "Multinomial Classification" => MultinomialClassification
     case "regression" | "Regression" => Regression

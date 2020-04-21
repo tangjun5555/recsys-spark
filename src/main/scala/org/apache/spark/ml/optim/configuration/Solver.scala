@@ -28,7 +28,7 @@ object Solver extends Enumeration {
       LBFGS,
       ParallelFtrl = Value
 
-  private[ml] def fromString(name: String): Solver = name match {
+  def fromString(name: String): Solver = name match {
     case "sgd" | "SGD" => GradientDescent
     case "psgd" | "PSGD" => ParallelGradientDescent
     case "lbfgs" | "LBFGS" => LBFGS
