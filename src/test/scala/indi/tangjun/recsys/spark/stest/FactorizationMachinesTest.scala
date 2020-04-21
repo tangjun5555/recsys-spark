@@ -21,33 +21,34 @@ import indi.tangjun.recsys.spark.rank.FactorizationMachine
 import indi.tangjun.recsys.spark.util.SparkUtil
 import org.apache.spark.ml.evaluation.MulticlassClassificationEvaluator
 import org.apache.spark.ml.optim.configuration.{Algo, Solver}
+import org.apache.spark.sql.DataFrame
 
 /**
-  * An example for Factorization Machines.
-  */
+ * An example for Factorization Machines.
+ */
 object FactorizationMachinesSuite {
 
   def main(args: Array[String]): Unit = {
     val spark = SparkUtil.getLocalSparkSession(this.getClass.getSimpleName)
 
-    val train = spark.read.format("libsvm").load("data/a9a/a9a.tr")
-    val test = spark.read.format("libsvm").load("data/a9a/a9a.te")
+    val train: DataFrame = spark.read.format("libsvm").load("data/a9a/a9a.tr")
+    val test: DataFrame = spark.read.format("libsvm").load("data/a9a/a9a.te")
 
     val trainer = new FactorizationMachine()
-        .setAlgo(Algo.fromString("binary classification"))
-        .setSolver(Solver.fromString("pftrl"))
-        .setDim((1, 1, 8))
-        .setReParamsL1((0.1, 0.1, 0.1))
-        .setRegParamsL2((0.01, 0.01, 0.01))
-        .setAlpha((0.1, 0.1, 0.1))
-        .setBeta((1.0, 1.0, 1.0))
-        .setInitStdev(0.01)
-        // .setStepSize(0.1)
-        .setTol(0.001)
-        .setMaxIter(1)
-        .setThreshold(0.5)
-        // .setMiniBatchFraction(0.5)
-        .setNumPartitions(4)
+      .setAlgo(Algo.fromString("binary classification"))
+      .setSolver(Solver.fromString("pftrl"))
+      .setDim((1, 1, 8))
+      .setReParamsL1((0.1, 0.1, 0.1))
+      .setRegParamsL2((0.01, 0.01, 0.01))
+      .setAlpha((0.1, 0.1, 0.1))
+      .setBeta((1.0, 1.0, 1.0))
+      .setInitStdev(0.01)
+      .setStepSize(0.1)
+      .setTol(0.001)
+      .setMaxIter(1)
+      .setThreshold(0.5)
+      .setMiniBatchFraction(0.5)
+      .setNumPartitions(4)
 
     val model = trainer.fit(train)
     val result = model.transform(test)
@@ -55,7 +56,7 @@ object FactorizationMachinesSuite {
     val evaluator = new MulticlassClassificationEvaluator().setMetricName("accuracy")
     println("Accuracy: " + evaluator.evaluate(predictionAndLabel))
 
-    Thread.sleep( 1000 * 1000)
+    Thread.sleep(1000 * 1000)
 
     spark.stop()
   }

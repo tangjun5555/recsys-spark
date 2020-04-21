@@ -30,4 +30,5 @@ object Algo extends Enumeration {
     case "regression" | "Regression" => Regression
     case _ => throw new IllegalArgumentException(s"Did not recognize Algo name: $name")
   }
+
 }
