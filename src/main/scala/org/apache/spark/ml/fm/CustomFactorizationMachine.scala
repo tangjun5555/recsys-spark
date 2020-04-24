@@ -259,7 +259,7 @@ class CustomFactorizationMachine extends Serializable {
     val data: RDD[(Double, linalg.Vector)] = labeledPointDataRDD
       .map(lp => (lp.label, linalg.Vectors.fromML(lp.features)))
       .persist(StorageLevel.MEMORY_AND_DISK)
-    val numSample: Long = data.count()
+    val numSample: Int = data.count().toInt
 
     var weights: linalg.Vector = if (initialModel.isDefined) {
       initialModel.get.weights
@@ -267,10 +267,10 @@ class CustomFactorizationMachine extends Serializable {
       initWeights(numFeatures)
     }
 
-    // 每一个epoch抽取的样本比例
+    // 每一次迭代抽取的样本比例
     val realMiniBatchFraction: Double = batchSize * 1.0 / numSample
-    // 每一个epoch运行的迭代次数
-    val maxIter: Int = (numSample / batchSize).toInt
+    // 最大迭代次数
+    val maxIter: Int = epoch * numSample / batchSize + 1
 
     val gradient = new FMCustomGradient(factorDim)
     val optimizer: Optimizer = optimMethod match {
@@ -287,12 +287,13 @@ class CustomFactorizationMachine extends Serializable {
           .setConvergenceTol(0.0)
       case _ => throw new IllegalArgumentException(s"${this.getClass.getSimpleName} do not support ${optimMethod} now.")
     }
+    val newWeights = optimizer.optimize(data, weights)
+//    var newWeights: linalg.Vector = linalg.Vectors.dense(weights.toDense.values)
+//    0.until(epoch).foreach(_ => {
+//      newWeights = optimizer.optimize(data, weights)
+//      weights = newWeights
+//    })
 
-    var newWeights: linalg.Vector = linalg.Vectors.dense(weights.toDense.values)
-    0.until(epoch).foreach(_ => {
-      newWeights = optimizer.optimize(data, weights)
-      weights = newWeights
-    })
     val fmModel: FMCustomModel = new FMCustomModel(newWeights, factorDim)
     this.fmModel = Some(fmModel)
 
