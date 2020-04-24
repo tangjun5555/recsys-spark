@@ -73,11 +73,12 @@
             <version>3.6</version>
         </dependency>
 
-        <!-- https://mvnrepository.com/artifact/com.spotify/annoy -->
+        <!-- https://mvnrepository.com/artifact/com.microsoft.ml.spark/mmlspark -->
         <dependency>
-            <groupId>com.spotify</groupId>
-            <artifactId>annoy</artifactId>
-            <version>0.2.6</version>
+            <groupId>com.microsoft.ml.spark</groupId>
+            <artifactId>mmlspark_2.11</artifactId>
+            <version>0.18.1</version>
+<!--            <scope>provided</scope>-->
         </dependency>
     </dependencies>
 
