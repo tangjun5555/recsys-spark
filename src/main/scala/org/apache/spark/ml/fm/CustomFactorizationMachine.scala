@@ -98,15 +98,19 @@ class CustomFactorizationMachine extends Serializable {
     this.epoch
   }
 
-  private var batchSize: Int = 128
+  private var batchSize: Option[Int] = None
 
   def setBatchSize(value: Int): this.type = {
-    this.batchSize = value
+    this.batchSize = Some(value)
     this
   }
 
   def getBatchSize(): Int = {
-    this.batchSize
+    if (this.batchSize.isDefined) {
+      this.batchSize.get
+    } else {
+      0
+    }
   }
 
   //  /**
@@ -117,12 +121,21 @@ class CustomFactorizationMachine extends Serializable {
   //   */
   //  private var maxIter: Int = 100
 
-  //  /**
-  //   *
-  //   * Fraction of data to be used per iteration.
-  //   * range (0, 1.0]
-  //   */
-  //  private var miniBatchFraction: Double = 0.1
+  /**
+   *
+   * Fraction of data to be used per iteration.
+   * range (0, 1.0]
+   */
+  private var miniBatchFraction: Double = 0.1
+
+  def setMiniBatchFraction(value: Double): this.type = {
+    this.miniBatchFraction = value
+    this
+  }
+
+  def getMiniBatchFraction(): Double = {
+    this.miniBatchFraction
+  }
 
   //  /**
   //   *
@@ -261,16 +274,25 @@ class CustomFactorizationMachine extends Serializable {
       .persist(StorageLevel.MEMORY_AND_DISK)
     val numSample: Int = data.count().toInt
 
-    var weights: linalg.Vector = if (initialModel.isDefined) {
+    val weights: linalg.Vector = if (initialModel.isDefined) {
       initialModel.get.weights
     } else {
       initWeights(numFeatures)
     }
 
     // 每一次迭代抽取的样本比例
-    val realMiniBatchFraction: Double = batchSize * 1.0 / numSample
+    val realMiniBatchFraction: Double = if (this.batchSize.isDefined) {
+      this.batchSize.get * 1.0 / numSample
+    } else {
+      this.miniBatchFraction
+    }
+
     // 最大迭代次数
-    val maxIter: Int = epoch * numSample / batchSize + 1
+    val maxIter: Int = if (this.batchSize.isDefined) {
+      epoch * numSample / this.batchSize.get + 1
+    } else {
+      (epoch * (1.0 / miniBatchFraction)).toInt + 1
+    }
 
     val gradient = new FMCustomGradient(factorDim)
     val optimizer: Optimizer = optimMethod match {
@@ -288,11 +310,6 @@ class CustomFactorizationMachine extends Serializable {
       case _ => throw new IllegalArgumentException(s"${this.getClass.getSimpleName} do not support ${optimMethod} now.")
     }
     val newWeights = optimizer.optimize(data, weights)
-//    var newWeights: linalg.Vector = linalg.Vectors.dense(weights.toDense.values)
-//    0.until(epoch).foreach(_ => {
-//      newWeights = optimizer.optimize(data, weights)
-//      weights = newWeights
-//    })
 
     val fmModel: FMCustomModel = new FMCustomModel(newWeights, factorDim)
     this.fmModel = Some(fmModel)
