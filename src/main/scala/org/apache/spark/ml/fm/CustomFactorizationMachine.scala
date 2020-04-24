@@ -1,0 +1,320 @@
+package org.apache.spark.ml.fm
+
+import org.apache.spark.ml.feature.LabeledPoint
+import org.apache.spark.ml.linalg.Vector
+import org.apache.spark.mllib.linalg
+import org.apache.spark.mllib.optimization.{GradientDescent, Optimizer}
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.{DataFrame, Dataset, Row}
+import org.apache.spark.sql.functions.{udf, col}
+import org.apache.spark.storage.StorageLevel
+
+import scala.util.Random
+
+/**
+ * author: tangj
+ * time: 2020/4/23 11:38
+ * description: 自定义完整实现FM
+ */
+class CustomFactorizationMachine extends Serializable {
+
+  private var labelColumnName: String = "label"
+
+  def setLabelColumnName(value: String): this.type = {
+    this.labelColumnName = value
+    this
+  }
+
+  def getLabelColumnName(): String = {
+    this.labelColumnName
+  }
+
+  private var featuresColumnName: String = "features"
+
+  def setFeaturesColumnName(value: String): this.type = {
+    this.featuresColumnName = value
+    this
+  }
+
+  def getFeaturesColumnName(): String = {
+    this.featuresColumnName
+  }
+
+  private var predictionColumnName: String = "prediction"
+
+  def setPredictionColumnName(value: String): this.type = {
+    this.predictionColumnName = value
+    this
+  }
+
+  def getPredictionColumnName(): String = {
+    this.predictionColumnName
+  }
+
+  private var fmModel: Option[FMCustomModel] = None
+
+  /**
+   * 优化方法
+   * default SGD
+   */
+  private var optimMethod: String = "SGD"
+
+  def setOptimizer(value: String): this.type = {
+    this.optimMethod = value
+    this
+  }
+
+  def getOptimizer(): String = {
+    this.optimMethod
+  }
+
+  /**
+   * 隐向量维度
+   * default 4
+   */
+  private var factorDim: Int = 4
+
+  def setFactorDim(value: Int): this.type = {
+    this.factorDim = value
+    this
+  }
+
+  def getFactorDim(): Int = {
+    this.factorDim
+  }
+
+  /**
+   * 迭代轮数
+   * default 10
+   */
+  private var epoch: Int = 10
+
+  def setEpoch(value: Int): this.type = {
+    this.epoch = value
+    this
+  }
+
+  def getEpoch(): Int = {
+    this.epoch
+  }
+
+  private var batchSize: Int = 128
+
+  def setBatchSize(value: Int): this.type = {
+    this.batchSize = value
+    this
+  }
+
+  def getBatchSize(): Int = {
+    this.batchSize
+  }
+
+  //  /**
+  //   *
+  //   * 每一个epoch的最大迭代轮数
+  //   * default 100
+  //   * epoch * 1.0 / miniBatchFraction
+  //   */
+  //  private var maxIter: Int = 100
+
+  //  /**
+  //   *
+  //   * Fraction of data to be used per iteration.
+  //   * range (0, 1.0]
+  //   */
+  //  private var miniBatchFraction: Double = 0.1
+
+  //  /**
+  //   *
+  //   * Default is 0.001
+  //   * 0.0
+  //   */
+  //  private var convergenceTol: Double = 0.0
+  //
+  //  def setConvergenceTol(value: Double): this.type = {
+  //    this.convergenceTol = value
+  //    this
+  //  }
+
+  private var initWeightByZero: Boolean = false
+
+  def setInitWeightByZero(value: Boolean): this.type = {
+    this.initWeightByZero = value
+    this
+  }
+
+  def getInitWeightByZero(): Boolean = {
+    this.initWeightByZero
+  }
+
+  /**
+   *
+   * 二阶项初始化的
+   * Stdev for initialization of 2-way factors.
+   */
+  private var initStdev: Double = 0.1
+
+  def setInitStdev(value: Double): this.type = {
+    this.initStdev = value
+    this
+  }
+
+  def getInitStdev(): Double = {
+    this.initStdev
+  }
+
+  //  /**
+  //   *
+  //   * Number of partitions to be used for optimization.
+  //   */
+  //  private var numPartitions: Int = 10
+
+  /**
+   *
+   * Hyper parameter alpha of learning rate.
+   * default 0.2
+   */
+  private var learningRate: Double = 0.2
+
+  def setLearningRate(value: Double): this.type = {
+    this.learningRate = value
+    this
+  }
+
+  def getLearningRate(): Double = {
+    this.learningRate
+  }
+
+  /**
+   * 正则化类型
+   */
+  private var regularizationType: String = "L1"
+
+  def setRegularizationType(value: String): this.type = {
+    this.regularizationType = value
+    this
+  }
+
+  def getRegularizationType(): String = {
+    this.regularizationType
+  }
+
+  /**
+   * 正则化参数
+   */
+  private var regularizationParam: Double = 0.01
+
+  def setRegularizationParam(value: Double): this.type = {
+    this.regularizationParam = value
+    this
+  }
+
+  def getRegularizationParam(): Double = {
+    this.regularizationParam
+  }
+
+  /**
+   * 初始化模型, 用于增量学习
+   */
+  private var initialModel: Option[FMCustomModel] = None
+
+  def setInitialModel(value: FMCustomModel): this.type = {
+    this.initialModel = Some(value)
+    this
+  }
+
+  /**
+   * 初始化参数
+   *
+   * @param numFeatures
+   * @return
+   */
+  private def initWeights(numFeatures: Int): linalg.Vector = {
+    if (initWeightByZero) {
+      linalg.Vectors.zeros(1 + numFeatures + numFeatures * factorDim)
+    } else {
+      linalg.Vectors.dense(
+        Array.fill(1 + numFeatures)(0.0) ++
+          Array.fill(numFeatures * factorDim)(Random.nextGaussian() * initStdev)
+      )
+    }
+  }
+
+  private def extractLabeledPoints(dataset: Dataset[_]): RDD[LabeledPoint] = {
+    dataset.select(labelColumnName, featuresColumnName)
+      .rdd.map {
+      case Row(label: Double, features: Vector) => LabeledPoint(label, features)
+    }
+  }
+
+  /**
+   * @param rawDataDF
+   * @return
+   */
+  def fit(rawDataDF: DataFrame): CustomFactorizationMachine = {
+    val labeledPointDataRDD: RDD[LabeledPoint] = extractLabeledPoints(rawDataDF)
+    val numFeatures = labeledPointDataRDD.first().features.size
+    require(numFeatures > 0)
+
+    val data: RDD[(Double, linalg.Vector)] = labeledPointDataRDD
+      .map(lp => (lp.label, linalg.Vectors.fromML(lp.features)))
+      .persist(StorageLevel.MEMORY_AND_DISK)
+    val numSample: Long = data.count()
+
+    var weights: linalg.Vector = if (initialModel.isDefined) {
+      initialModel.get.weights
+    } else {
+      initWeights(numFeatures)
+    }
+
+    // 每一个epoch抽取的样本比例
+    val realMiniBatchFraction: Double = batchSize * 1.0 / numSample
+    // 每一个epoch运行的迭代次数
+    val maxIter: Int = (numSample / batchSize).toInt
+
+    val gradient = new FMCustomGradient(factorDim)
+    val optimizer: Optimizer = optimMethod match {
+      case "SGD" =>
+        val updater: FMCustomUpdater = new FMCustomUpdater(regularizationType)
+        new GradientDescent(gradient, updater)
+          .setNumIterations(maxIter)
+          .setMiniBatchFraction(realMiniBatchFraction) // 每一次迭代抽取的样本比例
+
+          .setStepSize(learningRate) // 学习率
+          .setRegParam(regularizationParam) // 正则化参数
+
+          //          .setConvergenceTol(convergenceTol)
+          .setConvergenceTol(0.0)
+      case _ => throw new IllegalArgumentException(s"${this.getClass.getSimpleName} do not support ${optimMethod} now.")
+    }
+
+    var newWeights: linalg.Vector = linalg.Vectors.dense(weights.toDense.values)
+    0.until(epoch).foreach(_ => {
+      newWeights = optimizer.optimize(data, weights)
+      weights = newWeights
+    })
+    val fmModel: FMCustomModel = new FMCustomModel(newWeights, factorDim)
+    this.fmModel = Some(fmModel)
+
+    this
+  }
+
+  /**
+   * 预测
+   *
+   * @param rawDataDF
+   * @return
+   */
+  def predict(rawDataDF: DataFrame): DataFrame = {
+    if (this.fmModel.isDefined) {
+      val predictCol = udf(
+        (features: Vector) => this.fmModel.get.predict(linalg.Vectors.fromML(features))
+      )
+      rawDataDF
+        .withColumn(predictionColumnName, predictCol(col(featuresColumnName)))
+    } else {
+      throw new Exception(s"${this.getClass.getSimpleName} this is not fit before.")
+    }
+  }
+
+}
