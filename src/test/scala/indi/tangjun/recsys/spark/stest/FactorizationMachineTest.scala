@@ -46,7 +46,7 @@ object FactorizationMachineTest {
       .persist(StorageLevel.MEMORY_AND_DISK)
 
     val model = new FactorizationMachine()
-      .setEpoch(5)
+      .setEpoch(10)
       .setFactorDim(4)
       .setRegularizationType("L1")
       .setLearningRate(0.01)

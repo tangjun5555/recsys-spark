@@ -14,8 +14,10 @@ object Demo01 {
 
   def main(args: Array[String]): Unit = {
 
-    val numFeatures = (621 - 1) / 4
-    println(numFeatures)
+//    val numFeatures = (621 - 1) / 4
+//    println(numFeatures)
+
+    println(1.toDouble == 1.0)
 
 //    val v1 = Vectors.sparse(10, Seq((1, 1.0), (9, 1.0)))
 //    println(v1.size)
