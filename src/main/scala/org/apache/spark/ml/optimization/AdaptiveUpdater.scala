@@ -5,9 +5,11 @@ import org.apache.spark.annotation.DeveloperApi
 import org.apache.spark.mllib.linalg.Vector
 
 import scala.math._
+
 trait AdaUpdater extends Serializable {
   val epsilon = 1e-8
 }
+
 /**
  * :: DeveloperApi ::
  * Adam updater for gradient descent with L2 regularization.
