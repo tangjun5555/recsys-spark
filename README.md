@@ -1,7 +1,7 @@
 # recsys-spark
 Implementation of commonly used recommendation system algorithm based on spark.
 
-# Models List
+# Model List
 
 ## Mathch Algorithm
 ### ItemCF 
