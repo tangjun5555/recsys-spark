@@ -4,7 +4,7 @@ import scala.math._
 import breeze.linalg.{axpy => brzAxpy, norm => brzNorm, Vector => BV}
 import org.apache.spark.mllib.linalg
 import org.apache.spark.mllib.linalg.{Vector, Vectors}
-import org.apache.spark.mllib.optimization.Updater
+import org.apache.spark.mllib.optimization.{Updater, SimpleUpdater, L1Updater, SquaredL2Updater}
 
 /**
  * author: tangj
@@ -21,10 +21,10 @@ class FMCustomUpdater(val regularizationType: String) extends Updater {
 
   override def compute(
                         weightsOld: linalg.Vector
-                        , gradient: linalg.Vector  // 根据Loss计算出来的梯度，不包括正则项
-                        , stepSize: Double  // 学习率
-                        , iter: Int  // 迭代步数
-                        , regParam: Double  // 正则参数
+                        , gradient: linalg.Vector // 根据Loss计算出来的梯度，不包括正则项
+                        , stepSize: Double // 学习率
+                        , iter: Int // 迭代步数
+                        , regParam: Double // 正则参数
                       ): (linalg.Vector, Double) = {
     updater.compute(weightsOld, gradient, stepSize, iter, regParam)
   }
