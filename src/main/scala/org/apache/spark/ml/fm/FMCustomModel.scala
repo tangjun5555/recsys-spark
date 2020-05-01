@@ -27,6 +27,12 @@ class FMCustomModel(
 
 object FMCustomModel {
 
+  /**
+   * @param features
+   * @param weights
+   * @param factorDim
+   * @return
+   */
   def predictAndSum(features: Vector, weights: Vector, factorDim: Int): (Double, Array[Double]) = {
     val numFeatures = (weights.size - 1) / (factorDim + 1)
 

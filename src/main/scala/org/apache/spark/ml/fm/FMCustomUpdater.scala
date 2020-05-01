@@ -11,12 +11,27 @@ import org.apache.spark.mllib.optimization.{Updater, SimpleUpdater, L1Updater, S
  * time: 2020/4/23 10:51
  * description: FM梯度更新实例类
  */
-class FMCustomUpdater(val regularizationType: String) extends Updater {
+class FMCustomUpdater(val regularizationType: String, val useCustomUpdater: Boolean = true) extends Updater {
 
   private val updater = regularizationType match {
-    case "L1" => new L1Updater()
-    case "L2" => new SquaredL2Updater()
-    case _ => new SimpleUpdater()
+    case "L1" =>
+      if (useCustomUpdater) {
+        new CustomL1Updater()
+      } else {
+        new L1Updater()
+      }
+    case "L2" =>
+      if (useCustomUpdater) {
+        new CustomSquaredL2Updater()
+      } else {
+        new SquaredL2Updater()
+      }
+    case _ =>
+      if (useCustomUpdater) {
+        new CustomSimpleUpdater()
+      } else {
+        new SimpleUpdater()
+      }
   }
 
   override def compute(
@@ -31,7 +46,7 @@ class FMCustomUpdater(val regularizationType: String) extends Updater {
 
 }
 
-class SimpleUpdater extends Updater {
+class CustomSimpleUpdater extends Updater {
   override def compute(
                         weightsOld: Vector,
                         gradient: Vector,
@@ -44,7 +59,7 @@ class SimpleUpdater extends Updater {
   }
 }
 
-class L1Updater extends Updater {
+class CustomL1Updater extends Updater {
   override def compute(
                         weightsOld: Vector,
                         gradient: Vector,
@@ -67,7 +82,7 @@ class L1Updater extends Updater {
   }
 }
 
-class SquaredL2Updater extends Updater {
+class CustomSquaredL2Updater extends Updater {
 
   override def compute(
                         weightsOld: Vector,
