@@ -3,10 +3,10 @@ package org.apache.spark.ml.fm
 import org.apache.spark.ml.feature.LabeledPoint
 import org.apache.spark.ml.linalg.Vector
 import org.apache.spark.mllib.linalg
-import org.apache.spark.mllib.optimization.{GradientDescent, Optimizer}
+import org.apache.spark.mllib.optimization.{GradientDescent, LBFGS, Optimizer}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, Dataset, Row}
-import org.apache.spark.sql.functions.{udf, col}
+import org.apache.spark.sql.functions.{col, udf}
 import org.apache.spark.storage.StorageLevel
 
 import scala.util.Random
@@ -55,9 +55,9 @@ class CustomFactorizationMachine extends Serializable {
 
   /**
    * 优化方法
-   * default SGD
+   * default GradientDescent
    */
-  private var optimMethod: String = "SGD"
+  private var optimMethod: String = "GradientDescent"
 
   def setOptimizer(value: String): this.type = {
     this.optimMethod = value
@@ -295,9 +295,9 @@ class CustomFactorizationMachine extends Serializable {
     }
 
     val gradient = new FMCustomGradient(factorDim)
+    val updater: FMCustomUpdater = new FMCustomUpdater(regularizationType)
     val optimizer: Optimizer = optimMethod match {
-      case "SGD" =>
-        val updater: FMCustomUpdater = new FMCustomUpdater(regularizationType)
+      case "GradientDescent" =>
         new GradientDescent(gradient, updater)
           .setNumIterations(maxIter)
           .setMiniBatchFraction(realMiniBatchFraction) // 每一次迭代抽取的样本比例
@@ -307,6 +307,7 @@ class CustomFactorizationMachine extends Serializable {
 
           //          .setConvergenceTol(convergenceTol)
           .setConvergenceTol(0.0)
+//      case "LBFGS" =>  new LBFGS()
       case _ => throw new IllegalArgumentException(s"${this.getClass.getSimpleName} do not support ${optimMethod} now.")
     }
     val newWeights = optimizer.optimize(data, weights)
