@@ -1,6 +1,5 @@
 package indi.tangjun.recsys.spark.stest
 
-import indi.tangjun.recsys.spark.rank.LightGBM
 import indi.tangjun.recsys.spark.util.SparkUtil
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.sql.{DataFrame, SparkSession}
