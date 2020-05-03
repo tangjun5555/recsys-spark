@@ -2,7 +2,7 @@ package indi.tangjun.recsys.spark.stest
 
 import indi.tangjun.recsys.spark.rank.FactorizationMachine
 import indi.tangjun.recsys.spark.util.SparkUtil
-import org.apache.spark.ml.evaluation.PointWiseRankEvaluator
+import org.apache.spark.ml.evaluation.AUCAndLogLossEvaluator
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.storage.StorageLevel
 
@@ -56,7 +56,7 @@ object FactorizationMachineTest {
     val trainPreDF = model.predict(trainDF)
     val validPreDF = model.predict(validDF)
 
-    val evaluator = new PointWiseRankEvaluator()
+    val evaluator = new AUCAndLogLossEvaluator()
     val (trainLogLoss, trainAUC) = evaluator.evaluate(trainPreDF)
     val (validLogLoss, validAUC) = evaluator.evaluate(validPreDF)
 
