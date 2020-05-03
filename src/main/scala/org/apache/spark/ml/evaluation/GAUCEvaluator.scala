@@ -89,9 +89,9 @@ class GAUCEvaluator extends Serializable {
         }
         val positiveNum = pairs.count(x => x._2 == 1.0)
         val negativeNum = pairs.count(x => x._2 == 0.0)
-        (row._1._2, count * 1.0 / (positiveNum * negativeNum))
+        (row._1._2, row._1._2 * count * 1.0 / (positiveNum * negativeNum))
       })
-      .reduce((x, y) => (x._1 + y._1, x._1 * x._2 + y._1 * y._2))
+      .reduce((x, y) => (x._1 + y._1, x._2 + y._2))
 
     result._2 / result._1
   }
