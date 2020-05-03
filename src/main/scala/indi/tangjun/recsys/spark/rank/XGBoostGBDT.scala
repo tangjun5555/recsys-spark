@@ -5,6 +5,6 @@ package indi.tangjun.recsys.spark.rank
  * time: 2020/5/2 10:14
  * description:
  */
-class XGBoost {
+class XGBoostGBDT {
 
 }
