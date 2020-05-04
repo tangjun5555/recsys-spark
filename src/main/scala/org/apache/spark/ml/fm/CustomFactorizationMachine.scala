@@ -307,7 +307,13 @@ class CustomFactorizationMachine extends Serializable {
 
           //          .setConvergenceTol(convergenceTol)
           .setConvergenceTol(0.0)
-//      case "LBFGS" =>  new LBFGS()
+
+      case "LBFGS" =>  new LBFGS(gradient, updater)
+          .setNumIterations(maxIter)
+          .setRegParam(regularizationParam)
+          .setConvergenceTol(0.0)
+          .setNumCorrections(10)
+
       case _ => throw new IllegalArgumentException(s"${this.getClass.getSimpleName} do not support ${optimMethod} now.")
     }
     val newWeights = optimizer.optimize(data, weights)
