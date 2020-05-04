@@ -51,6 +51,17 @@ class CustomFactorizationMachine extends Serializable {
     this.predictionColumnName
   }
 
+  private var sampleWeightColumnName: String = "sample_weight"
+
+  def setSampleWeightColumnName(value: String): this.type = {
+    this.sampleWeightColumnName = value
+    this
+  }
+
+  def getSampleWeightColumnName(): String = {
+    this.sampleWeightColumnName
+  }
+
   private var fmModel: Option[FMCustomModel] = None
 
   /**
@@ -226,6 +237,17 @@ class CustomFactorizationMachine extends Serializable {
     this.regularizationParam
   }
 
+  private var useSampleWeight: Boolean = false
+
+  def setUseSampleWeight(value: Boolean): this.type = {
+    this.useSampleWeight = value
+    this
+  }
+
+  def getUseSampleWeight(): Boolean = {
+    this.useSampleWeight
+  }
+
   /**
    * 初始化模型, 用于增量学习
    */
@@ -254,9 +276,28 @@ class CustomFactorizationMachine extends Serializable {
   }
 
   private def extractLabeledPoints(dataset: Dataset[_]): RDD[LabeledPoint] = {
-    dataset.select(labelColumnName, featuresColumnName)
-      .rdd.map {
-      case Row(label: Double, features: Vector) => LabeledPoint(label, features)
+    if (this.useSampleWeight) {
+      dataset.select(labelColumnName, sampleWeightColumnName, featuresColumnName)
+        .rdd.map {
+        case Row(label: Double, sampleWeight: Double, features: Vector) => {
+          assert(Seq(0.0, 1.0).contains(label))
+          assert(sampleWeight > 0.0)
+          if (label == 1.0) {
+            LabeledPoint(label * sampleWeight, features)
+          } else {
+            if (sampleWeight == 1.0) {
+              LabeledPoint(label, features)
+            } else {
+              LabeledPoint(-sampleWeight, features)
+            }
+          }
+        }
+      }
+    } else {
+      dataset.select(labelColumnName, featuresColumnName)
+        .rdd.map {
+        case Row(label: Double, features: Vector) => LabeledPoint(label, features)
+      }
     }
   }
 
@@ -308,11 +349,11 @@ class CustomFactorizationMachine extends Serializable {
           //          .setConvergenceTol(convergenceTol)
           .setConvergenceTol(0.0)
 
-      case "LBFGS" =>  new LBFGS(gradient, updater)
-          .setNumIterations(maxIter)
-          .setRegParam(regularizationParam)
-          .setConvergenceTol(0.0)
-          .setNumCorrections(10)
+      case "LBFGS" => new LBFGS(gradient, updater)
+        .setNumIterations(maxIter)
+        .setRegParam(regularizationParam)
+        .setConvergenceTol(0.0)
+        .setNumCorrections(10)
 
       case _ => throw new IllegalArgumentException(s"${this.getClass.getSimpleName} do not support ${optimMethod} now.")
     }
