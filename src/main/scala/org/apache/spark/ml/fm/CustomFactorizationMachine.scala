@@ -160,17 +160,6 @@ class CustomFactorizationMachine extends Serializable {
   //    this
   //  }
 
-  private var initWeightByZero: Boolean = false
-
-  def setInitWeightByZero(value: Boolean): this.type = {
-    this.initWeightByZero = value
-    this
-  }
-
-  def getInitWeightByZero(): Boolean = {
-    this.initWeightByZero
-  }
-
   /**
    *
    * 二阶项初始化的
@@ -265,14 +254,10 @@ class CustomFactorizationMachine extends Serializable {
    * @return
    */
   private def initWeights(numFeatures: Int): linalg.Vector = {
-    if (initWeightByZero) {
-      linalg.Vectors.zeros(1 + numFeatures + numFeatures * factorDim)
-    } else {
       linalg.Vectors.dense(
         Array.fill(1 + numFeatures)(0.0) ++
-          Array.fill(numFeatures * factorDim)(Random.nextGaussian() * initStdev)
+          Array.fill(numFeatures * factorDim)(new Random(555L).nextGaussian() * initStdev)
       )
-    }
   }
 
   private def extractLabeledPoints(dataset: Dataset[_]): RDD[LabeledPoint] = {
