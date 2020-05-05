@@ -127,7 +127,7 @@ class Item2Vec extends ItemEmbedding {
       .setMaxSentenceLength(sequenceMaxLength)
       .setWindowSize(sequenceMaxLength)
       .setNumPartitions(spark.conf.get("spark.default.parallelism").toInt / 2)
-      .setMinCount(1)
+      .setMinCount(0)
       .setSeed(555L)
       .fit(rawDataDF)
     // "word", "vector"
