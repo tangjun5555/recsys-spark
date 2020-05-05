@@ -296,7 +296,10 @@ class CustomFactorizationMachine extends Serializable {
     } else {
       dataset.select(labelColumnName, featuresColumnName)
         .rdd.map {
-        case Row(label: Double, features: Vector) => LabeledPoint(label, features)
+        case Row(label: Double, features: Vector) => {
+          assert(Seq(0.0, 1.0).contains(label))
+          LabeledPoint(label, features)
+        }
       }
     }
   }

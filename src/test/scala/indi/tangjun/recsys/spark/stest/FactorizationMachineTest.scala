@@ -51,6 +51,7 @@ object FactorizationMachineTest {
       .setFactorDim(4)
       .setRegularizationType("L1")
       .setLearningRate(0.01)
+      .setOptimizer("LBFGS")
       .fit(trainDF)
 
     val trainPreDF = model.predict(trainDF)
