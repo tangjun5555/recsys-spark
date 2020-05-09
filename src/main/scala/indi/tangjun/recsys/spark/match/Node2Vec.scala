@@ -4,6 +4,7 @@ import org.apache.spark.graphx.{Edge, Graph, VertexId}
 import org.apache.spark.ml.feature.Word2VecModel
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.storage.StorageLevel
 
 import scala.collection.mutable.ArrayBuffer
 
@@ -54,6 +55,8 @@ class Node2Vec extends ItemEmbedding {
     this.itemColumnName
   }
 
+  private var timestampColumnName: String = "timestamp"
+
   private var vectorColumnName = "vector"
 
   def setVectorColumnName(value: String): this.type = {
@@ -78,6 +81,11 @@ class Node2Vec extends ItemEmbedding {
   private var itemVectorDF: DataFrame = _
 
   def fit(rawDataDF: DataFrame): this.type = {
+    val dataDF = rawDataDF.select(userColumnName, itemColumnName, timestampColumnName)
+      .distinct()
+      .persist(StorageLevel.MEMORY_AND_DISK)
+    this.dataDF = dataDF
+
 
 
 

@@ -168,17 +168,17 @@ class UserCF extends U2IMatch {
       .groupByKey()
       .filter(_._2.size >= 2)
       .map(row => {
-        if (row._2.size > maxItemRelatedUser) {
-          println(s"[${this.getClass.getSimpleName}.fit], item:${row._1}, userSize:${row._2.size}")
-          val userFrequencyValue = userFrequencyBroadcast.value
-          row._2.toSeq.sortBy(_._1)
-            .map(x => (x._1, x._2, userFrequencyValue.getOrElse(x._1, Long.MaxValue)))
-            .sortBy(_._3).map(x => (x._1, x._2))
-            .slice(0, maxItemRelatedUser)
-        } else {
-          row._2.toSeq.sortBy(_._1)
-        }
-      })
+      if (row._2.size > maxItemRelatedUser) {
+        println(s"[${this.getClass.getSimpleName}.fit], item:${row._1}, userSize:${row._2.size}")
+        val userFrequencyValue = userFrequencyBroadcast.value
+        row._2.toSeq.sortBy(_._1)
+          .map(x => (x._1, x._2, userFrequencyValue.getOrElse(x._1, Long.MaxValue)))
+          .sortBy(_._3).map(x => (x._1, x._2))
+          .slice(0, maxItemRelatedUser)
+      } else {
+        row._2.toSeq.sortBy(_._1)
+      }
+    })
       .flatMap(row => {
         val buffer = ArrayBuffer[((String, String), (Double, Double, Double, Int))]()
         val itemSet = row.sorted
