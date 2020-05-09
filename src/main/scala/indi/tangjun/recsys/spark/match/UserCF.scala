@@ -7,6 +7,7 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.storage.StorageLevel
 
 import scala.collection.mutable.ArrayBuffer
+import scala.util.Random
 
 /**
  * author: tangj
@@ -22,20 +23,10 @@ class UserCF extends U2IMatch {
 
   private var spark: SparkSession = _
 
-  private def setSpark(spark: SparkSession): UserCF = {
-    this.spark = spark
-    this
-  }
-
   /**
    * 保留训练数据
    */
   private var dataDF: DataFrame = _
-
-  private def setDataDF(dataDF: DataFrame): UserCF = {
-    this.dataDF = dataDF
-    this
-  }
 
   private var userColumnName: String = "user"
 
@@ -149,14 +140,14 @@ class UserCF extends U2IMatch {
 
   def fit(rawDataDF: DataFrame): UserCF = {
     val spark = rawDataDF.sparkSession
-    setSpark(spark)
+    this.spark = spark
     import spark.implicits._
 
     val dataDF = rawDataDF
       .groupBy(userColumnName, itemColumnName)
       .agg(max(ratingColumnName).as(ratingColumnName))
       .persist(StorageLevel.MEMORY_AND_DISK)
-    setDataDF(dataDF)
+    this.dataDF = dataDF
 
     // 统计基本信息
     println(s"[${this.getClass.getSimpleName}.fit] dataDF.size:${dataDF.count()}")
@@ -192,10 +183,11 @@ class UserCF extends U2IMatch {
         val buffer = ArrayBuffer[((String, String), (Double, Double, Double, Int))]()
         val itemSet = row.sorted
         for (i <- 0.until(itemSet.size - 1)) {
+          val prefix = Random.nextInt(100) + "-"
           for (j <- (i + 1).until(itemSet.size)) {
             buffer.+=(
               (
-                (itemSet(i)._1, itemSet(j)._1)
+                (prefix + itemSet(i)._1, itemSet(j)._1)
                 , (itemSet(i)._2 * itemSet(j)._2, math.pow(itemSet(i)._2, 2.0), math.pow(itemSet(j)._2, 2.0), 1))
             )
           }
@@ -207,6 +199,8 @@ class UserCF extends U2IMatch {
     val userSimilarityDF = coCccurrenceUserPairRDD
       .reduceByKey((x, y) => (x._1 + y._1, x._2 + y._2, x._3 + y._3, x._4 + y._4))
       .filter(_._2._4 >= minCommonItemNum)
+      .map(x => ((x._1._1.split("-")(1), x._1._2), x._2))
+      .reduceByKey((x, y) => (x._1 + y._1, x._2 + y._2, x._3 + y._3, x._4 + y._4))
       .map(x => {
         val middleScore = x._2
         if (implicitPrefs) {

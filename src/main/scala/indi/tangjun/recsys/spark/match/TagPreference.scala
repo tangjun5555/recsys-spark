@@ -1,6 +1,6 @@
 package indi.tangjun.recsys.spark.`match`
 
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.{DataFrame, SparkSession}
 
 /**
  * author: tangj
@@ -17,6 +17,32 @@ import org.apache.spark.sql.DataFrame
  * w = a * a
  */
 class TagPreference extends U2IMatch {
+
+  private var spark: SparkSession = _
+
+  private var dataDF: DataFrame = _
+
+  private var userColumnName: String = "user"
+
+  def setUserColumnName(value: String): this.type = {
+    this.userColumnName = value
+    this
+  }
+
+  def getUserColumnName(): String = {
+    this.userColumnName
+  }
+
+  private var itemColumnName: String = "item"
+
+  def setItemColumnName(value: String): this.type = {
+    this.itemColumnName = value
+    this
+  }
+
+  def getItemColumnName(): String = {
+    this.itemColumnName
+  }
 
   override def recommendForUser(recNum: Int, withScore: Boolean, recResultColumnName: String): DataFrame = ???
 

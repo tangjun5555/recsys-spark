@@ -1,6 +1,7 @@
 package indi.tangjun.recsys.spark.`match`
 
 import org.apache.spark.graphx.{Edge, Graph, VertexId}
+import org.apache.spark.ml.feature.Word2VecModel
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
@@ -53,17 +54,47 @@ class Node2Vec extends ItemEmbedding {
     this.itemColumnName
   }
 
-  var node2id: RDD[(String, Long)] = _
+  private var vectorColumnName = "vector"
 
-  var indexedEdges: RDD[Edge[EdgeAttr]] = _
-  var indexedNodes: RDD[(VertexId, NodeAttr)] = _
-  var graph: Graph[NodeAttr, EdgeAttr] = _
-
-  var randomWalkPaths: RDD[(Long, ArrayBuffer[Long])] = _
-
-  def fit(rawDataDF: DataFrame) = {
-
+  def setVectorColumnName(value: String): this.type = {
+    this.vectorColumnName = value
+    this
   }
 
-  override def getItemEmbedding(vectorAsString: Boolean): DataFrame = ???
+  def getVectorColumnName(): String = {
+    this.vectorColumnName
+  }
+
+  private var node2id: RDD[(String, Long)] = _
+
+  private var indexedEdges: RDD[Edge[EdgeAttr]] = _
+  private var indexedNodes: RDD[(VertexId, NodeAttr)] = _
+  private var graph: Graph[NodeAttr, EdgeAttr] = _
+
+  private var randomWalkPaths: RDD[(Long, ArrayBuffer[Long])] = _
+
+  private var word2Vec: Word2VecModel = _
+
+  private var itemVectorDF: DataFrame = _
+
+  def fit(rawDataDF: DataFrame): this.type = {
+
+
+
+    this
+  }
+
+  override def getItemEmbedding(vectorAsString: Boolean): DataFrame = {
+    val spark = this.spark
+    import spark.implicits._
+    if (vectorAsString) {
+      this.itemVectorDF
+        .rdd.map(row => (row.getAs[String]("word"), row.getAs[Seq[Float]]("vector").mkString(",")))
+        .toDF(itemColumnName, vectorColumnName)
+    } else {
+      this.itemVectorDF.withColumnRenamed("word", itemColumnName)
+        .withColumnRenamed("vector", itemColumnName)
+    }
+  }
+
 }
