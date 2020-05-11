@@ -1,6 +1,6 @@
 package indi.tangjun.recsys.spark.`match`
 
-import org.apache.spark.ml.feature.{Word2Vec, Word2VecModel}
+import org.apache.spark.mllib.feature.{Word2Vec, Word2VecModel}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.storage.StorageLevel
 
@@ -93,7 +93,7 @@ class Item2Vec extends ItemEmbedding {
     this.iter
   }
 
-  private var learningRate: Double = 0.2
+  private var learningRate: Double = 0.025
 
   def setLearningRate(learningRate: Double): Item2Vec = {
     this.learningRate = learningRate
@@ -111,6 +111,7 @@ class Item2Vec extends ItemEmbedding {
   def fit(rawDataDF: DataFrame): Item2Vec = {
     val spark = rawDataDF.sparkSession
     this.spark = spark
+    import spark.implicits._
 
     val dataDF = rawDataDF
       .select(sampleIdColumnName, sequenceColumnName)
@@ -122,19 +123,19 @@ class Item2Vec extends ItemEmbedding {
       .max()
 
     this.word2Vec = new Word2Vec()
-      .setInputCol(sequenceColumnName)
-      .setOutputCol(vectorColumnName)
-      .setMaxIter(iter)
+      .setNumIterations(iter)
       .setVectorSize(vectorSize)
-      .setStepSize(learningRate) // Learning rate
+      .setLearningRate(learningRate)
       .setMaxSentenceLength(sequenceMaxLength)
       .setWindowSize(sequenceMaxLength)
-      .setNumPartitions(spark.conf.get("spark.default.parallelism").toInt / 2)
       .setMinCount(0)
+      .setNumPartitions(spark.conf.get("spark.default.parallelism").toInt / 20)
       .setSeed(555L)
-      .fit(rawDataDF)
-    // "word", "vector"
-    this.itemVectorDF = this.word2Vec.getVectors
+      .fit(dataDF.select(sequenceColumnName)
+        .rdd.map(row => row.getAs[Seq[String]](sequenceColumnName))
+      )
+    this.itemVectorDF = this.word2Vec.getVectors.toSeq.toDF("word", "vector")
+
     this
   }
 
