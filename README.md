@@ -7,15 +7,15 @@ Implementation of commonly used recommendation system algorithm based on spark.
 ### ItemCF 
 ### UserCF
 ### FunkSVD
+### TagPreference
 ### Swing
-### SimRank
 ### Item2Vec
 ### DeepWalk
-### TagPreference
+### Node2Vec
 
 ## Rank Algorithm
 ### FM
-### LightGBM
+### XGBoostGBDT
 
 
 # Usage

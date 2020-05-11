@@ -175,7 +175,7 @@ class Node2Vec extends ItemEmbedding {
       .map(x => (x._1, Array((x._2, x._3))))
       .reduceByKey(_ ++ _)
       .map(x => (x._1, NodeAttr(neighbors = x._2)))
-      .persist(StorageLevel.MEMORY_AND_DISK)
+      .cache()
 
     val graphEdges: RDD[Edge[EdgeAttr]] = graphNodes
       .flatMap { case (srcId, nodeAttr) =>
@@ -183,6 +183,7 @@ class Node2Vec extends ItemEmbedding {
           Edge(srcId, dstId, EdgeAttr())
         }
       }
+      .cache()
 
     val graph: Graph[NodeAttr, EdgeAttr] = Graph(graphNodes, graphEdges)
       .mapVertices[NodeAttr] { case (vertexId: Long, nodeAttr: NodeAttr) =>
@@ -194,7 +195,6 @@ class Node2Vec extends ItemEmbedding {
         edgeTriplet.attr.dstNeighbors = edgeTriplet.dstAttr.neighbors
         edgeTriplet.attr
       }
-      .persist(StorageLevel.MEMORY_AND_DISK)
 
     val edge2Attr: RDD[(String, EdgeAttr)] = graph.triplets.map { edgeTriplet =>
       (s"${edgeTriplet.srcId}${edgeTriplet.dstId}", edgeTriplet.attr)
