@@ -65,7 +65,7 @@ class Node2Vec extends ItemEmbedding {
   private var itemColumnName: String = "item"
 
   def setItemColumnName(value: String): this.type = {
-    this.itemColumnName = itemColumnName
+    this.itemColumnName = value
     this
   }
 
