@@ -8,6 +8,9 @@ import org.apache.spark.storage.StorageLevel
  * author: tangjun 1844250138@qq.com
  * time: 2020/2/27 11:48
  * description:
+ *
+ * item2vec与word2vec在具体实现上最大的区别在于item2vec没有窗口概念
+ *
  */
 class Item2Vec extends ItemEmbedding {
 
@@ -144,7 +147,7 @@ class Item2Vec extends ItemEmbedding {
         .toDF(itemColumnName, vectorColumnName)
     } else {
       this.itemVectorDF.withColumnRenamed("word", itemColumnName)
-        .withColumnRenamed("vector", itemColumnName)
+        .withColumnRenamed("vector", vectorColumnName)
     }
   }
 
