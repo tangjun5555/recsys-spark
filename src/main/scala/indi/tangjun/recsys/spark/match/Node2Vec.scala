@@ -35,14 +35,14 @@ class Node2Vec extends ItemEmbedding {
   }
 
   private case class NodeAttr(
-                       var neighbors: Array[(Long, Double)] = Array.empty[(Long, Double)], // 顶点的邻居和对应的权重
-                       var path: Array[Long] = Array.empty[Long] // 顶点随机游走的列表，初始值为空
-                     ) extends Serializable
+                               var neighbors: Array[(Long, Double)] = Array.empty[(Long, Double)], // 顶点的邻居和对应的权重
+                               var path: Array[Long] = Array.empty[Long] // 顶点随机游走的列表，初始值为空
+                             ) extends Serializable
 
   private case class EdgeAttr(
-                       var srcNeighbors: Array[(Long, Double)] = Array.empty[(Long, Double)], // 起点的邻居和对应的权重
-                       var dstNeighbors: Array[(Long, Double)] = Array.empty[(Long, Double)] // 终点的邻居和对应的权重
-                     ) extends Serializable
+                               var srcNeighbors: Array[(Long, Double)] = Array.empty[(Long, Double)], // 起点的邻居和对应的权重
+                               var dstNeighbors: Array[(Long, Double)] = Array.empty[(Long, Double)] // 终点的邻居和对应的权重
+                             ) extends Serializable
 
   private var spark: SparkSession = _
 
@@ -136,6 +136,7 @@ class Node2Vec extends ItemEmbedding {
       .filter(s"${ratingColumnName}>0.0")
       .distinct()
       .persist(StorageLevel.MEMORY_AND_DISK)
+    dataDF.show(30, false)
     this.dataDF = dataDF
 
     // 统计基本信息
@@ -143,14 +144,13 @@ class Node2Vec extends ItemEmbedding {
     println(s"[${this.getClass.getSimpleName}.fit] dataDF.user.size:${dataDF.select(userColumnName).distinct().count()}")
     println(s"[${this.getClass.getSimpleName}.fit] dataDF.item.size:${dataDF.select(itemColumnName).distinct().count()}")
 
-    val itemId2Index: Array[(String, Long)] = dataDF.rdd.map(x => x.getAs[String](itemColumnName))
+    val itemId2IndexRDD: RDD[(String, Long)] = dataDF.rdd.map(x => x.getAs[String](itemColumnName))
       .distinct()
-      .zipWithIndex
-      .collect()
-    val itemId2IndexBroadcast: Broadcast[Map[String, Long]] = spark.sparkContext.broadcast(itemId2Index.toMap)
-    val index2ItemIdBroadcast: Broadcast[Map[Long, String]] = spark.sparkContext.broadcast(itemId2Index.map(x => (x._2, x._1)).toMap)
+      .zipWithIndex()
+      .persist(StorageLevel.MEMORY_AND_DISK)
+    println(itemId2IndexRDD.first())
 
-    val inputTriplets: RDD[(VertexId, VertexId, Double)] = dataDF.rdd
+    val inputTriplets = dataDF.rdd
       .map(x => (x.getAs[String](userColumnName), (x.getAs[String](timestampColumnName), x.getAs[String](itemColumnName), x.getAs[Double](ratingColumnName))))
       .groupByKey()
       .filter(_._2.size >= 2)
@@ -166,16 +166,18 @@ class Node2Vec extends ItemEmbedding {
         buffer
       })
       .reduceByKey(_ + _)
-      .map(x => {
-        val itemId2IndexValue: Map[String, Long] = itemId2IndexBroadcast.value
-        (itemId2IndexValue(x._1._1), itemId2IndexValue(x._1._2), x._2)
-      })
+      .map(x => (x._1._1, (x._1._2, x._2)))
+      .join(itemId2IndexRDD)
+      .map(x => (x._2._1._1, (x._2._2, x._2._1._2)))
+      .join(itemId2IndexRDD)
+      .map(x => (x._2._1._1, x._2._2, x._2._1._2))
 
     val graphNodes: RDD[(VertexId, NodeAttr)] = inputTriplets
       .map(x => (x._1, Array((x._2, x._3))))
       .reduceByKey(_ ++ _)
       .map(x => (x._1, NodeAttr(neighbors = x._2)))
       .cache()
+    println(graphNodes.first())
 
     val graphEdges: RDD[Edge[EdgeAttr]] = graphNodes
       .flatMap { case (srcId, nodeAttr) =>
@@ -184,9 +186,10 @@ class Node2Vec extends ItemEmbedding {
         }
       }
       .cache()
+    println(graphEdges.first())
 
     val graph: Graph[NodeAttr, EdgeAttr] = Graph(graphNodes, graphEdges)
-      .mapVertices[NodeAttr] { case (vertexId: Long, nodeAttr: NodeAttr) =>
+      .mapVertices { case (vertexId, nodeAttr) =>
         nodeAttr.path = Array(vertexId, randomChoice(nodeAttr.neighbors))
         nodeAttr
       }
@@ -201,9 +204,7 @@ class Node2Vec extends ItemEmbedding {
     }
       .persist(StorageLevel.MEMORY_AND_DISK)
 
-    var randomWalkPaths: RDD[(Long, ArrayBuffer[Long])] = null
-
-    for (i <- 0.until(this.walkEpoch)) {
+    val realRandomWalkPaths: RDD[(VertexId, ArrayBuffer[VertexId])] = 0.until(10).map(i => {
       var prevWalk: RDD[(Long, ArrayBuffer[Long])] = null
       var randomWalk: RDD[(VertexId, ArrayBuffer[VertexId])] = graph.vertices.map { case (vertexId: Long, nodeAttr: NodeAttr) =>
         val pathBuffer = new ArrayBuffer[Long]()
@@ -240,16 +241,10 @@ class Node2Vec extends ItemEmbedding {
           .persist(StorageLevel.MEMORY_AND_DISK)
         prevWalk.unpersist(blocking = false)
       }
-
-      if (randomWalkPaths != null) {
-        val prevRandomWalkPaths = randomWalkPaths
-        randomWalkPaths = randomWalkPaths.union(randomWalk).persist(StorageLevel.MEMORY_AND_DISK)
-        randomWalkPaths.first
-        prevRandomWalkPaths.unpersist(blocking = false)
-      } else {
-        randomWalkPaths = randomWalk
-      }
-    }
+      randomWalk
+    })
+      .reduce(_.union(_))
+      .filter(x => x._2 != null && x._2.length >= 2)
 
     this.word2Vec = new Word2Vec()
       .setNumIterations(20)
@@ -260,14 +255,15 @@ class Node2Vec extends ItemEmbedding {
       .setMinCount(0)
       .setNumPartitions(spark.conf.get("spark.default.parallelism").toInt / 20)
       .setSeed(555L)
-      .fit(randomWalkPaths.map(x => {
-        x._2.map(y => {
-          val index2ItemIdValue = index2ItemIdBroadcast.value
-          index2ItemIdValue(y)
-        })
-      }))
+      .fit(realRandomWalkPaths.map(x => x._2.map(_.toString)))
 
-    this.itemVectorDF = this.word2Vec.getVectors.toSeq.toDF("word", "vector")
+    val tmp2: RDD[(Long, String)] = itemId2IndexRDD.map(x => (x._2, x._1))
+    this.itemVectorDF = spark.sparkContext.makeRDD(this.word2Vec.getVectors.toSeq.map(x => (x._1.toLong, x._2)))
+      .join(
+        tmp2
+      )
+      .map(x => (x._2._2, x._2._1))
+      .toDF("word", "vector")
 
     this
   }
