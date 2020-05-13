@@ -1,6 +1,6 @@
 package org.apache.spark.ml.fm
 
-import indi.tangjun.recsys.spark.jutil.MathFunctionUtil
+import com.github.tangjun5555.recsys.spark.jutil.MathFunctionUtil
 import org.apache.spark.mllib.linalg
 import org.apache.spark.mllib.optimization.Gradient
 

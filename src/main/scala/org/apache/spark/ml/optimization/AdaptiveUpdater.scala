@@ -1,6 +1,6 @@
 package org.apache.spark.ml.optimization
 
-import indi.tangjun.recsys.spark.util.VectorUtil
+import com.github.tangjun5555.recsys.spark.util.VectorUtil
 import org.apache.spark.annotation.DeveloperApi
 import org.apache.spark.mllib.linalg.Vector
 

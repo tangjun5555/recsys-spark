@@ -1,6 +1,6 @@
 package org.apache.spark.ml.evaluation
 
-import indi.tangjun.recsys.spark.jutil.MathFunctionUtil
+import com.github.tangjun5555.recsys.spark.jutil.MathFunctionUtil
 import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.DataFrame
