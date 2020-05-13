@@ -1,6 +1,5 @@
 package indi.tangjun.recsys.spark.`match`
 
-import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.graphx.{Edge, EdgeTriplet, Graph, VertexId}
 import org.apache.spark.mllib.feature.{Word2Vec, Word2VecModel}
 import org.apache.spark.rdd.RDD
@@ -189,10 +188,10 @@ class Node2Vec extends ItemEmbedding {
     println(graphEdges.first())
 
     val graph: Graph[NodeAttr, EdgeAttr] = Graph(graphNodes, graphEdges)
-      .mapVertices { case (vertexId, nodeAttr) =>
+      .mapVertices((vertexId: VertexId, nodeAttr: NodeAttr) => {
         nodeAttr.path = Array(vertexId, randomChoice(nodeAttr.neighbors))
         nodeAttr
-      }
+      })
       .mapTriplets { edgeTriplet: EdgeTriplet[NodeAttr, EdgeAttr] =>
         edgeTriplet.attr.srcNeighbors = edgeTriplet.srcAttr.neighbors
         edgeTriplet.attr.dstNeighbors = edgeTriplet.dstAttr.neighbors
