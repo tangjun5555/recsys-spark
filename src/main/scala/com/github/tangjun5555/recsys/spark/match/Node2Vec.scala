@@ -1,7 +1,7 @@
 package com.github.tangjun5555.recsys.spark.`match`
 
 import org.apache.spark.graphx.{Edge, EdgeTriplet, Graph, VertexId}
-import org.apache.spark.mllib.feature.{Word2Vec, Word2VecModel}
+import org.apache.spark.mllib.{CustomWord2Vec, CustomWord2VecModel}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.storage.StorageLevel
@@ -122,7 +122,7 @@ class Node2Vec extends ItemEmbedding {
 
   private var q: Double = 1.0
 
-  private var word2Vec: Word2VecModel = _
+  private var word2Vec: CustomWord2VecModel = _
 
   private var itemVectorDF: DataFrame = _
 
@@ -245,7 +245,7 @@ class Node2Vec extends ItemEmbedding {
       .reduce(_.union(_))
       .filter(x => x._2 != null && x._2.length >= 2)
 
-    this.word2Vec = new Word2Vec()
+    this.word2Vec = new CustomWord2Vec()
       .setNumIterations(20)
       .setVectorSize(32)
       .setLearningRate(0.025)

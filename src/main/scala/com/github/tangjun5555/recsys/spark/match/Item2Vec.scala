@@ -1,6 +1,6 @@
 package com.github.tangjun5555.recsys.spark.`match`
 
-import org.apache.spark.mllib.feature.{Word2Vec, Word2VecModel}
+import org.apache.spark.mllib.{CustomWord2Vec, CustomWord2VecModel}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.storage.StorageLevel
 
@@ -104,7 +104,7 @@ class Item2Vec extends ItemEmbedding {
     this.learningRate
   }
 
-  private var word2Vec: Word2VecModel = _
+  private var word2Vec: CustomWord2VecModel = _
 
   private var itemVectorDF: DataFrame = _
 
@@ -122,7 +122,7 @@ class Item2Vec extends ItemEmbedding {
       .rdd.map(row => row.getAs[Seq[String]](sequenceColumnName).size)
       .max()
 
-    this.word2Vec = new Word2Vec()
+    this.word2Vec = new CustomWord2Vec()
       .setNumIterations(iter)
       .setVectorSize(vectorSize)
       .setLearningRate(learningRate)
