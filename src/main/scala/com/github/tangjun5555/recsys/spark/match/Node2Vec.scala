@@ -226,17 +226,19 @@ class Node2Vec extends ItemEmbedding {
           .map { case (_, ((srcNodeId, pathBuffer), edgeAttr)) =>
             val srcNeighbors: Array[(VertexId, Double)] = edgeAttr.srcNeighbors
             val dstNeighbors: Array[(VertexId, Double)] = edgeAttr.dstNeighbors
-            val neighbors_ : Array[(Long, Double)] = dstNeighbors.map { case (dstNeighborId, weight) =>
-              var unnormProb = weight / q
-              if (srcNodeId == dstNeighborId) {
-                unnormProb = weight / p
-              } else if (srcNeighbors.exists(_._1 == dstNeighborId)) {
-                unnormProb = weight
+            if (!dstNeighbors.isEmpty) {
+              val neighbors_ : Array[(Long, Double)] = dstNeighbors.map { case (dstNeighborId, weight) =>
+                var unnormProb = weight / q
+                if (srcNodeId == dstNeighborId) {
+                  unnormProb = weight / p
+                } else if (srcNeighbors.exists(_._1 == dstNeighborId)) {
+                  unnormProb = weight
+                }
+                (dstNeighborId, unnormProb)
               }
-              (dstNeighborId, unnormProb)
+              val nextNodeId = randomChoice(neighbors_)
+              pathBuffer.append(nextNodeId)
             }
-            val nextNodeId = randomChoice(neighbors_)
-            pathBuffer.append(nextNodeId)
             (srcNodeId, pathBuffer)
           }
           .persist(StorageLevel.MEMORY_AND_DISK)

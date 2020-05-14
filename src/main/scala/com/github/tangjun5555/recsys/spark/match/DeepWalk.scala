@@ -229,7 +229,7 @@ class DeepWalk extends ItemEmbedding {
           .join(edge2Attr)
           .map { case (_, ((srcNodeId, pathBuffer), edgeAttr)) =>
             val dstNeighbors: Array[(VertexId, Double)] = edgeAttr.dstNeighbors
-            if (dstNeighbors.isEmpty) {
+            if (!dstNeighbors.isEmpty) {
               val nextNodeId = randomChoice(edgeAttr.dstNeighbors)
               pathBuffer.append(nextNodeId)
             }
