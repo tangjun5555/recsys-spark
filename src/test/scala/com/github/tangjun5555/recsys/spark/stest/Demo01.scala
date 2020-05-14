@@ -25,14 +25,20 @@ object Demo01 {
   }
 
   def main(args: Array[String]): Unit = {
-    val pathBuffer = new ArrayBuffer[Long]()
-//    var path: Array[Long] = Array.empty[Long]
-//    pathBuffer.append(path: _*)
-//    println(pathBuffer.mkString(","))
-//    println(path.mkString(","))
-    pathBuffer.append(10L)
+    val v1 = Array("a", "b")
+    val v2 = Array("c", "d")
+    val v3 = v1 ++ v2
+    println(v3.mkString(","))
 
-    println(pathBuffer.mkString(","))
+
+//    val pathBuffer = new ArrayBuffer[Long]()
+////    var path: Array[Long] = Array.empty[Long]
+////    pathBuffer.append(path: _*)
+////    println(pathBuffer.mkString(","))
+////    println(path.mkString(","))
+//    pathBuffer.append(10L)
+
+//    println(pathBuffer.mkString(","))
 
 //    val values = Array(
 //      (1L, 10.0)

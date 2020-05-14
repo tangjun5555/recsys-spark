@@ -2,7 +2,6 @@ package com.github.tangjun5555.recsys.spark.stest
 
 import com.github.tangjun5555.recsys.spark.rank.FactorizationMachine
 import com.github.tangjun5555.recsys.spark.util.SparkUtil
-import indi.tangjun5555.recsys.spark.util.SparkUtil
 import org.apache.spark.ml.evaluation.AUCAndLogLossEvaluator
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.storage.StorageLevel

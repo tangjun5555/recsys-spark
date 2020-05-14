@@ -149,7 +149,7 @@ class Node2Vec extends ItemEmbedding {
       .persist(StorageLevel.MEMORY_AND_DISK)
     println(itemId2IndexRDD.first())
 
-    val inputTriplets = dataDF.rdd
+    val inputTriplets: RDD[(VertexId, VertexId, Double)] = dataDF.rdd
       .map(x => (x.getAs[String](userColumnName), (x.getAs[String](timestampColumnName), x.getAs[String](itemColumnName), x.getAs[Double](ratingColumnName))))
       .groupByKey()
       .filter(_._2.size >= 2)
@@ -171,7 +171,7 @@ class Node2Vec extends ItemEmbedding {
       .join(itemId2IndexRDD)
       .map(x => (x._2._1._1, x._2._2, x._2._1._2))
 
-    val graphNodes: RDD[(VertexId, NodeAttr)] = inputTriplets
+    val graphNodes: RDD[(Long, NodeAttr)] = inputTriplets
       .map(x => (x._1, Array((x._2, x._3))))
       .reduceByKey(_ ++ _)
       .map(x => (x._1, NodeAttr(neighbors = x._2)))
@@ -187,16 +187,13 @@ class Node2Vec extends ItemEmbedding {
       .cache()
     println(graphEdges.first())
 
-    val graph: Graph[NodeAttr, EdgeAttr] = Graph(graphNodes, graphEdges)
-      .mapVertices((vertexId: VertexId, nodeAttr: NodeAttr) => {
-        nodeAttr.path = Array(vertexId, randomChoice(nodeAttr.neighbors))
-        nodeAttr
-      })
+    val graph: Graph[NodeAttr, EdgeAttr] = Graph(graphNodes, graphEdges, defaultVertexAttr = NodeAttr())
       .mapTriplets { edgeTriplet: EdgeTriplet[NodeAttr, EdgeAttr] =>
         edgeTriplet.attr.srcNeighbors = edgeTriplet.srcAttr.neighbors
         edgeTriplet.attr.dstNeighbors = edgeTriplet.dstAttr.neighbors
         edgeTriplet.attr
       }
+      .cache()
 
     val edge2Attr: RDD[(String, EdgeAttr)] = graph.triplets.map { edgeTriplet =>
       (s"${edgeTriplet.srcId}${edgeTriplet.dstId}", edgeTriplet.attr)
@@ -205,12 +202,17 @@ class Node2Vec extends ItemEmbedding {
 
     val realRandomWalkPaths: RDD[(VertexId, ArrayBuffer[VertexId])] = 0.until(10).map(i => {
       var prevWalk: RDD[(Long, ArrayBuffer[Long])] = null
-      var randomWalk: RDD[(VertexId, ArrayBuffer[VertexId])] = graph.vertices.map { case (vertexId: Long, nodeAttr: NodeAttr) =>
-        val pathBuffer = new ArrayBuffer[Long]()
-        pathBuffer.append(vertexId)
-        pathBuffer.append(randomChoice(nodeAttr.neighbors))
-        (vertexId, pathBuffer)
-      }
+      var randomWalk: RDD[(VertexId, ArrayBuffer[VertexId])] = graph.vertices
+        .filter {
+          case (vertexId: Long, nodeAttr: NodeAttr) =>
+            !nodeAttr.neighbors.isEmpty
+        }
+        .map { case (vertexId: Long, nodeAttr: NodeAttr) =>
+          val pathBuffer = new ArrayBuffer[Long]()
+          pathBuffer.append(vertexId)
+          pathBuffer.append(randomChoice(nodeAttr.neighbors))
+          (vertexId, pathBuffer)
+        }
         .persist(StorageLevel.MEMORY_AND_DISK)
 
       for (j <- 0.until(this.walkLength - 2)) {
@@ -256,11 +258,9 @@ class Node2Vec extends ItemEmbedding {
       .setSeed(555L)
       .fit(realRandomWalkPaths.map(x => x._2.map(_.toString)))
 
-    val tmp2: RDD[(Long, String)] = itemId2IndexRDD.map(x => (x._2, x._1))
+    val index2ItemIdRDD: RDD[(Long, String)] = itemId2IndexRDD.map(x => (x._2, x._1))
     this.itemVectorDF = spark.sparkContext.makeRDD(this.word2Vec.getVectors.toSeq.map(x => (x._1.toLong, x._2)))
-      .join(
-        tmp2
-      )
+      .join(index2ItemIdRDD)
       .map(x => (x._2._2, x._2._1))
       .toDF("word", "vector")
 
