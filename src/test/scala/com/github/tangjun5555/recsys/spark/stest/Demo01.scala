@@ -25,10 +25,21 @@ object Demo01 {
   }
 
   def main(args: Array[String]): Unit = {
-    val v1 = Array("a", "b")
-    val v2 = Array("c", "d")
-    val v3 = v1 ++ v2
-    println(v3.mkString(","))
+    val pathBuffer = new ArrayBuffer[Long]()
+    println(pathBuffer.isEmpty)
+    println(pathBuffer.length)
+    println(pathBuffer.size)
+
+    pathBuffer.append(1L)
+    println(pathBuffer.isEmpty)
+    println(pathBuffer.length)
+    println(pathBuffer.size)
+
+
+//    val v1 = Array("a", "b")
+//    val v2 = Array("c", "d")
+//    val v3 = v1 ++ v2
+//    println(v3.mkString(","))
 
 
 //    val pathBuffer = new ArrayBuffer[Long]()

@@ -116,7 +116,7 @@ class DeepWalk extends ItemEmbedding {
     this.walkEpoch
   }
 
-  private var walkLength: Int = 50
+  private var walkLength: Int = 30
 
   def setWalkLength(value: Int): this.type = {
     this.walkLength = value
@@ -204,28 +204,29 @@ class DeepWalk extends ItemEmbedding {
     }
       .persist(StorageLevel.MEMORY_AND_DISK)
 
-    val realRandomWalkPaths: RDD[(VertexId, ArrayBuffer[VertexId])] = 0.until(10).map(i => {
-      var prevWalk: RDD[(Long, ArrayBuffer[Long])] = null
+    val realRandomWalkPaths: RDD[(Long, ArrayBuffer[Long])] = 0.until(walkEpoch).map(i => {
+
+      var preRandomWalk: RDD[(VertexId, ArrayBuffer[VertexId])] = null
       var randomWalk: RDD[(VertexId, ArrayBuffer[VertexId])] = graph.vertices
-        .filter {
-          case (vertexId: Long, nodeAttr: NodeAttr) =>
-            !nodeAttr.neighbors.isEmpty
-        }
         .map { case (vertexId: Long, nodeAttr: NodeAttr) =>
           val pathBuffer = new ArrayBuffer[Long]()
           pathBuffer.append(vertexId)
-          pathBuffer.append(randomChoice(nodeAttr.neighbors))
+          if (!nodeAttr.neighbors.isEmpty) {
+            pathBuffer.append(randomChoice(nodeAttr.neighbors))
+          }
           (vertexId, pathBuffer)
         }
-        .persist(StorageLevel.MEMORY_AND_DISK)
+        .filter(_._2.size >= 2)
+        .cache()
 
       for (j <- 0.until(this.walkLength - 2)) {
-        prevWalk = randomWalk
-        randomWalk = randomWalk.map { case (srcNodeId, pathBuffer) =>
-          val prevNodeId = pathBuffer(pathBuffer.length - 2)
-          val currentNodeId = pathBuffer(pathBuffer.length - 1)
-          (s"$prevNodeId$currentNodeId", (srcNodeId, pathBuffer))
-        }
+        preRandomWalk = randomWalk
+        randomWalk = randomWalk
+          .map { case (srcNodeId, pathBuffer) =>
+            val prevNodeId = pathBuffer(pathBuffer.length - 2)
+            val currentNodeId = pathBuffer(pathBuffer.length - 1)
+            (s"$prevNodeId$currentNodeId", (srcNodeId, pathBuffer))
+          }
           .join(edge2Attr)
           .map { case (_, ((srcNodeId, pathBuffer), edgeAttr)) =>
             val dstNeighbors: Array[(VertexId, Double)] = edgeAttr.dstNeighbors
@@ -235,13 +236,15 @@ class DeepWalk extends ItemEmbedding {
             }
             (srcNodeId, pathBuffer)
           }
-          .persist(StorageLevel.MEMORY_AND_DISK)
-        prevWalk.unpersist(blocking = false)
+
+        println(s"[${this.getClass.getSimpleName}.fit] finish walk, epoch:${i}, iter:${j}")
+        preRandomWalk.unpersist(false)
       }
       randomWalk
     })
       .reduce(_.union(_))
-      .filter(x => x._2.length >= 2)
+      .persist(StorageLevel.MEMORY_AND_DISK)
+    println(realRandomWalkPaths.count())
 
     this.word2Vec = new CustomWord2Vec()
       .setNumIterations(20)
