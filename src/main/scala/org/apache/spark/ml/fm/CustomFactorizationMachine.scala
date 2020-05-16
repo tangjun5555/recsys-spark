@@ -295,7 +295,7 @@ class CustomFactorizationMachine extends Serializable {
    * @param rawDataDF
    * @return
    */
-  def fit(rawDataDF: DataFrame): CustomFactorizationMachine = {
+  def fit(rawDataDF: DataFrame): this.type = {
     this.spark = rawDataDF.sparkSession
 
     val labeledPointDataRDD: RDD[LabeledPoint] = extractLabeledPoints(rawDataDF)
