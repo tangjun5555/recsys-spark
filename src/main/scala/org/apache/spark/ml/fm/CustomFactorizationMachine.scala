@@ -5,7 +5,7 @@ import org.apache.spark.ml.linalg.Vector
 import org.apache.spark.mllib.linalg
 import org.apache.spark.mllib.optimization.{GradientDescent, LBFGS, Optimizer}
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{DataFrame, Dataset, Row}
+import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 import org.apache.spark.sql.functions.{col, udf}
 import org.apache.spark.storage.StorageLevel
 
@@ -17,6 +17,8 @@ import scala.util.Random
  * description: 自定义完整实现FM
  */
 class CustomFactorizationMachine extends Serializable {
+
+  private var spark: SparkSession = null
 
   private var labelColumnName: String = "label"
 
@@ -254,10 +256,10 @@ class CustomFactorizationMachine extends Serializable {
    * @return
    */
   private def initWeights(numFeatures: Int): linalg.Vector = {
-      linalg.Vectors.dense(
-        Array.fill(1 + numFeatures)(0.0) ++
-          Array.fill(numFeatures * factorDim)(new Random(555L).nextGaussian() * initStdev)
-      )
+    linalg.Vectors.dense(
+      Array.fill(1 + numFeatures)(0.0) ++
+        Array.fill(numFeatures * factorDim)(new Random(555L).nextGaussian() * initStdev)
+    )
   }
 
   private def extractLabeledPoints(dataset: Dataset[_]): RDD[LabeledPoint] = {
@@ -294,6 +296,8 @@ class CustomFactorizationMachine extends Serializable {
    * @return
    */
   def fit(rawDataDF: DataFrame): CustomFactorizationMachine = {
+    this.spark = rawDataDF.sparkSession
+
     val labeledPointDataRDD: RDD[LabeledPoint] = extractLabeledPoints(rawDataDF)
     val numFeatures = labeledPointDataRDD.first().features.size
     require(numFeatures > 0)
@@ -360,6 +364,8 @@ class CustomFactorizationMachine extends Serializable {
    * @return
    */
   def predict(rawDataDF: DataFrame): DataFrame = {
+    this.spark = rawDataDF.sparkSession
+
     if (this.fmModel.isDefined) {
       val predictCol = udf(
         (features: Vector) => this.fmModel.get.predict(linalg.Vectors.fromML(features))
@@ -370,5 +376,44 @@ class CustomFactorizationMachine extends Serializable {
       throw new Exception(s"${this.getClass.getSimpleName} this is not fit before.")
     }
   }
+
+  def load(modelFilePath: String): this.type = {
+    val modelWeithgs: Array[String] = this.spark.sparkContext.textFile(modelFilePath, 1).collect().sorted
+    val factorDim = this.factorDim
+    val numFeatures = (modelWeithgs.length - 1) / (factorDim + 1)
+    val bias: Double = modelWeithgs.head.split(":")(1).trim.toDouble
+    val firstOrder: Seq[Double] =  0.until(numFeatures).map(i => {
+      modelWeithgs(1 + i).split(":")(1).trim.toDouble
+    })
+    val secondOrder: Seq[Double] = 0.until(numFeatures).flatMap(i => {
+      modelWeithgs(1 + numFeatures + i).split(":")(1).trim.split(" ").map(_.trim.toDouble)
+    })
+    val weights = linalg.Vectors.dense(Seq(bias).++(firstOrder).++(secondOrder).toArray)
+    this.fmModel = Some(new FMCustomModel(weights, this.factorDim))
+    this
+  }
+
+  def save(modelFilePath: String): this.type = {
+    if (this.fmModel.isDefined) {
+      val weights: Seq[Double] = this.fmModel.get.weights.toArray.toSeq
+      val factorDim = this.fmModel.get.factorDim
+
+      val numFeatures = (weights.length - 1) / (factorDim + 1)
+      val bias = s"bias: ${weights.head}"
+      val firstOrder: Seq[String] = 0.until(numFeatures).map(i => {
+        s"i_${i}: ${weights(1 + i)}"
+      })
+      val secondOrder = 0.until(numFeatures).map(i => {
+        s"v_${i}: ${weights.slice((1 + numFeatures) + i * factorDim, (1 + numFeatures) + (i+1) * factorDim).mkString(" ")}"
+      })
+
+      this.spark.sparkContext.makeRDD(Seq(bias).++(firstOrder).++(secondOrder), 1).saveAsTextFile(modelFilePath)
+    } else {
+      throw new Exception(s"${this.getClass.getSimpleName} this is not fit before.")
+    }
+
+    this
+  }
+
 
 }

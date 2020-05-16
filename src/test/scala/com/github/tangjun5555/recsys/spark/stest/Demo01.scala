@@ -25,15 +25,18 @@ object Demo01 {
   }
 
   def main(args: Array[String]): Unit = {
-    val pathBuffer = new ArrayBuffer[Long]()
-    println(pathBuffer.isEmpty)
-    println(pathBuffer.length)
-    println(pathBuffer.size)
+//    val pathBuffer = new ArrayBuffer[Long]()
+//    println(pathBuffer.isEmpty)
+//    println(pathBuffer.length)
+//    println(pathBuffer.size)
+//
+//    pathBuffer.append(1L)
+//    println(pathBuffer.isEmpty)
+//    println(pathBuffer.length)
+//    println(pathBuffer.size)
 
-    pathBuffer.append(1L)
-    println(pathBuffer.isEmpty)
-    println(pathBuffer.length)
-    println(pathBuffer.size)
+    val t1 = Seq("a,b", "c,d").flatMap(_.split(","))
+    println(t1.mkString(","))
 
 
 //    val v1 = Array("a", "b")

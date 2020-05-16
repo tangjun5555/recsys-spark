@@ -85,4 +85,14 @@ class XGBoostBinaryClassifier extends Serializable {
     }
   }
 
+  def load(modelFilePath: String): this.type = {
+
+    this
+  }
+
+  def save(modelFilePath: String): this.type = {
+
+    this
+  }
+
 }
