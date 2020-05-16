@@ -14,8 +14,8 @@ Implementation of commonly used recommendation system algorithm based on spark.
 ### Node2Vec
 
 ## Rank Algorithm
-### FM
-### XGBoostGBDT
+### FactorizationMachine
+### XGBoostBinaryClassifier
 
 
 # Usage
