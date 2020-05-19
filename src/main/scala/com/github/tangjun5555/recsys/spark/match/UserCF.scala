@@ -56,43 +56,43 @@ class UserCF extends U2IMatch {
    */
   private var shrinkDownSimilarityLambda: Double = 50.0
 
-  def setUserColumnName(userColumnName: String): UserCF = {
-    this.userColumnName = userColumnName
+  def setUserColumnName(value: String): this.type = {
+    this.userColumnName = value
     this
   }
 
-  def setItemColumnName(itemColumnName: String): UserCF = {
-    this.itemColumnName = itemColumnName
+  def setItemColumnName(value: String): this.type = {
+    this.itemColumnName = value
     this
   }
 
-  def setRatingColumnName(ratingColumnName: String): UserCF = {
-    this.ratingColumnName = ratingColumnName
+  def setRatingColumnName(value: String): this.type = {
+    this.ratingColumnName = value
     this
   }
 
-  def setMaxItemRelatedUser(maxItemRelatedUser: Int): UserCF = {
-    this.maxItemRelatedUser = maxItemRelatedUser
+  def setMaxItemRelatedUser(value: Int): this.type = {
+    this.maxItemRelatedUser = value
     this
   }
 
-  def setMaxSimUserNum(maxSimUserNum: Int): UserCF = {
-    this.maxSimUserNum = maxSimUserNum
+  def setMaxSimUserNum(value: Int): this.type = {
+    this.maxSimUserNum = value
     this
   }
 
-  def setImplicitPrefs(implicitPrefs: Boolean): UserCF = {
-    this.implicitPrefs = implicitPrefs
+  def setImplicitPrefs(value: Boolean): this.type = {
+    this.implicitPrefs = value
     this
   }
 
-  def setMinCommonItemNum(minCommonItemNum: Int): UserCF = {
-    this.minCommonItemNum = minCommonItemNum
+  def setMinCommonItemNum(value: Int): this.type = {
+    this.minCommonItemNum = value
     this
   }
 
-  def setShrinkDownSimilarityLambda(shrinkDownSimilarityLambda: Double): UserCF = {
-    this.shrinkDownSimilarityLambda = shrinkDownSimilarityLambda
+  def setShrinkDownSimilarityLambda(value: Double): this.type = {
+    this.shrinkDownSimilarityLambda = value
     this
   }
 

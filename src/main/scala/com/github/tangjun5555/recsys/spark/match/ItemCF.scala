@@ -57,7 +57,7 @@ class ItemCF extends I2IMatch with U2IMatch {
   /**
    * 控制物品共现矩阵的大小
    */
-  private var maxUserRelatedItem: Int = 10000
+  private var maxUserRelatedItem: Int = 1000
 
   /**
    * 每个物品保留前N个相似度最高的物品
