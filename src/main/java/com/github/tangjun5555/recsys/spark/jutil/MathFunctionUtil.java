@@ -55,32 +55,4 @@ public class MathFunctionUtil {
         return result;
     }
 
-    /**
-     * 计算Precision@N
-     *
-     * @param labels   不重复元素组合
-     * @param predicts 不重复元素组合
-     * @param num
-     * @return
-     */
-    public static double computeRecPrecisionRate(List<String> labels, List<String> predicts, int num) {
-        assert !CollectionUtils.isEmpty(labels);
-        assert num > 0;
-
-        double result = 0.0;
-        if (!CollectionUtils.isEmpty(predicts)) {
-            Set<String> validItems = new HashSet<>();
-            if (predicts.size() >= num) {
-                predicts = predicts.subList(0, num);
-            }
-            for (String item : predicts) {
-                if (labels.contains(item)) {
-                    validItems.add(item);
-                }
-            }
-            result = (1.0 * validItems.size()) / num;
-        }
-        return result;
-    }
-
 }

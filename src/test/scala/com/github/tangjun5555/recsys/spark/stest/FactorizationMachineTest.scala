@@ -14,7 +14,7 @@ import org.apache.spark.storage.StorageLevel
 object FactorizationMachineTest {
 
   def main(args: Array[String]): Unit = {
-    val spark = SparkUtil.getLocalSparkSession(this.getClass.getSimpleName)
+    val spark = SparkUtil.getSparkSession(this.getClass.getSimpleName)
     import spark.implicits._
 
     val trainDF = spark.sparkContext.textFile("data/libsvmtools_datasets/a9a/a9a.tr")

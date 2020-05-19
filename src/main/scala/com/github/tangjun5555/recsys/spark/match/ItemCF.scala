@@ -41,132 +41,96 @@ class ItemCF extends I2IMatch with U2IMatch {
 
   private var spark: SparkSession = _
 
-  /**
-   * 保留训练数据
-   */
   private var dataDF: DataFrame = _
 
   private var userColumnName: String = "user"
 
-  def setUserColumnName(userColumnName: String): ItemCF = {
-    this.userColumnName = userColumnName
-    this
-  }
-
-  def getUserColumnName(): String = {
-    this.userColumnName
-  }
-
   private var itemColumnName: String = "item"
 
-  def setItemColumnName(itemColumnName: String): ItemCF = {
-    this.itemColumnName = itemColumnName
-    this
-  }
-
-  def getItemColumnName(): String = {
-    this.itemColumnName
-  }
-
   private var ratingColumnName = "rating"
-
-  def setRatingColumnName(ratingColumnName: String): ItemCF = {
-    this.ratingColumnName = ratingColumnName
-    this
-  }
-
-  def getRatingColumnName(): String = {
-    this.ratingColumnName
-  }
-
-  /**
-   * 控制物品共现矩阵的大小
-   */
-  private var maxUserRelatedItem: Int = 10000
-
-  def setMaxUserRelatedItem(maxUserRelatedItem: Int): ItemCF = {
-    this.maxUserRelatedItem = maxUserRelatedItem
-    this
-  }
-
-  def getMaxUserRelatedItem(): Int = {
-    this.maxUserRelatedItem
-  }
-
-  /**
-   * 每个物品保留前N个相似度最高的物品
-   */
-  private var maxSimItemNum: Int = 20
-
-  def setMaxSimItemNum(maxSimItemNum: Int): ItemCF = {
-    this.maxSimItemNum = maxSimItemNum
-    this
-  }
-
-  def getMaxSimItemNum(): Int = {
-    this.maxSimItemNum
-  }
 
   /**
    * 是否是隐式反馈
    */
   private var implicitPrefs: Boolean = true
 
-  def setImplicitPrefs(implicitPrefs: Boolean): ItemCF = {
-    this.implicitPrefs = implicitPrefs
-    this
-  }
+  /**
+   * 控制物品共现矩阵的大小
+   */
+  private var maxUserRelatedItem: Int = 10000
 
-  def getImplicitPrefs(): Boolean = {
-    this.implicitPrefs
-  }
+  /**
+   * 每个物品保留前N个相似度最高的物品
+   */
+  private var maxSimItemNum: Int = 20
 
   private var minCommonUserNum: Int = 5
-
-  def setMinCommonUserNum(minCommonUserNum: Int): ItemCF = {
-    this.minCommonUserNum = minCommonUserNum
-    this
-  }
-
-  def getMinCommonUserNum(): Int = {
-    this.minCommonUserNum
-  }
 
   /**
    * 相似度校准
    */
   private var shrinkDownSimilarityLambda: Double = 50.0
 
-  def setShrinkDownSimilarityLambda(shrinkDownSimilarityLambda: Double): ItemCF = {
-    this.shrinkDownSimilarityLambda = shrinkDownSimilarityLambda
+  def setUserColumnName(value: String): this.type = {
+    this.userColumnName = value
     this
   }
 
-  def getShrinkDownSimilarityLambda(): Double = {
-    this.shrinkDownSimilarityLambda
+  def setItemColumnName(value: String): this.type = {
+    this.itemColumnName = value
+    this
+  }
+
+  def setRatingColumnName(value: String): this.type = {
+    this.ratingColumnName = value
+    this
+  }
+
+  def setMaxUserRelatedItem(value: Int): this.type = {
+    this.maxUserRelatedItem = value
+    this
+  }
+
+  def setMaxSimItemNum(value: Int): this.type = {
+    this.maxSimItemNum = value
+    this
+  }
+
+  def setImplicitPrefs(value: Boolean): this.type = {
+    this.implicitPrefs = value
+    this
+  }
+
+  def setMinCommonUserNum(value: Int): this.type = {
+    this.minCommonUserNum = value
+    this
+  }
+
+  def setShrinkDownSimilarityLambda(value: Double): this.type = {
+    this.shrinkDownSimilarityLambda = value
+    this
   }
 
   /**
    * 物品相似度计算结果
    */
-  private var itemSimilarityDF: DataFrame = _
+  private var itemSimilarityDF: DataFrame = null
 
-  def setItemSimilarityDF(itemSimilarityDF: DataFrame): ItemCF = {
-    this.itemSimilarityDF = itemSimilarityDF
-    this
+  def getItemSimilarityDF(): DataFrame = {
+    this.itemSimilarityDF
   }
 
-  def fit(rawDataDF: DataFrame
-         ): ItemCF = {
+  def fit(
+           rawDataDF: DataFrame
+         ): this.type = {
     val spark = rawDataDF.sparkSession
     this.spark = spark
     import spark.implicits._
 
-    val dataDF = rawDataDF
+    this.dataDF = rawDataDF
       .groupBy(userColumnName, itemColumnName)
       .agg(max(ratingColumnName).as(ratingColumnName))
       .persist(StorageLevel.MEMORY_AND_DISK)
-    this.dataDF = dataDF
 
     // 统计基本信息
     println(s"[${this.getClass.getSimpleName}.fit] dataDF.size:${dataDF.count()}")
@@ -221,7 +185,7 @@ class ItemCF extends I2IMatch with U2IMatch {
       })
 
     // 计算物品相似度
-    val itemSimilarityDF = coCccurrenceItemPairRDD
+    this.itemSimilarityDF = coCccurrenceItemPairRDD
       .reduceByKey((x, y) => (x._1 + y._1, x._2 + y._2, x._3 + y._3, x._4 + y._4))
       .map(x => ((x._1._1.split("-")(1), x._1._2), x._2))
       .reduceByKey((x, y) => (x._1 + y._1, x._2 + y._2, x._3 + y._3, x._4 + y._4))
@@ -259,7 +223,6 @@ class ItemCF extends I2IMatch with U2IMatch {
       .toDF("i1", "i2", "sim")
       .persist(StorageLevel.MEMORY_AND_DISK)
 
-    setItemSimilarityDF(itemSimilarityDF)
     println(s"[${this.getClass.getSimpleName}.fit] this.itemSimilarityDF.size:${this.itemSimilarityDF.count()}")
     this.itemSimilarityDF.show(30, false)
 
