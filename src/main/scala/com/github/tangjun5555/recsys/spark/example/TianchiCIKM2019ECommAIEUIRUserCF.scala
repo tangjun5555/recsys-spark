@@ -74,7 +74,7 @@ object TianchiCIKM2019ECommAIEUIRUserCF {
       .setItemColumnName("item_id")
       .setRatingColumnName("rating")
       .setImplicitPrefs(true)
-      .setMaxItemRelatedUser(10 * 10000)
+      .setMaxItemRelatedUser(5 * 1000)
       .fit(modelTrainDF)
     val predictDF = model.recommendForUser()
 
