@@ -30,102 +30,70 @@ class UserCF extends U2IMatch {
 
   private var userColumnName: String = "user"
 
-  def setUserColumnName(userColumnName: String): UserCF = {
-    this.userColumnName = userColumnName
-    this
-  }
-
-  def getUserColumnName(): String = {
-    this.userColumnName
-  }
-
   private var itemColumnName: String = "item"
 
-  def setItemColumnName(itemColumnName: String): UserCF = {
-    this.itemColumnName = itemColumnName
-    this
-  }
-
-  def getItemColumnName(): String = {
-    this.itemColumnName
-  }
-
   private var ratingColumnName = "rating"
-
-  def setRatingColumnName(ratingColumnName: String): UserCF = {
-    this.ratingColumnName = ratingColumnName
-    this
-  }
-
-  def getRatingColumnName(): String = {
-    this.ratingColumnName
-  }
 
   /**
    * 控制用户共现矩阵的大小
    */
   private var maxItemRelatedUser: Int = 10000
 
-  def setMaxItemRelatedUser(maxItemRelatedUser: Int): UserCF = {
-    this.maxItemRelatedUser = maxItemRelatedUser
-    this
-  }
-
-  def getMaxItemRelatedUser(): Int = {
-    this.maxItemRelatedUser
-  }
-
   /**
    * 每个用户保留相似度最高前N的用户
    */
   private var maxSimUserNum: Int = 20
-
-  def setMaxSimUserNum(maxSimUserNum: Int): UserCF = {
-    this.maxSimUserNum = maxSimUserNum
-    this
-  }
-
-  def getMaxSimUserNum(): Int = {
-    this.maxSimUserNum
-  }
 
   /**
    * 是否是隐式反馈
    */
   private var implicitPrefs: Boolean = true
 
-  def setImplicitPrefs(implicitPrefs: Boolean): UserCF = {
-    this.implicitPrefs = implicitPrefs
-    this
-  }
-
-  def getImplicitPrefs(): Boolean = {
-    this.implicitPrefs
-  }
-
   private var minCommonItemNum: Int = 5
-
-  def setMinCommonItemNum(minCommonItemNum: Int): UserCF = {
-    this.minCommonItemNum = minCommonItemNum
-    this
-  }
-
-  def getMinCommonItemNum(): Int = {
-    this.minCommonItemNum
-  }
 
   /**
    * 相似度校准
    */
   private var shrinkDownSimilarityLambda: Double = 50.0
 
-  def setShrinkDownSimilarityLambda(shrinkDownSimilarityLambda: Double): UserCF = {
-    this.shrinkDownSimilarityLambda = shrinkDownSimilarityLambda
+  def setUserColumnName(userColumnName: String): UserCF = {
+    this.userColumnName = userColumnName
     this
   }
 
-  def getShrinkDownSimilarityLambda(): Double = {
-    this.shrinkDownSimilarityLambda
+  def setItemColumnName(itemColumnName: String): UserCF = {
+    this.itemColumnName = itemColumnName
+    this
+  }
+
+  def setRatingColumnName(ratingColumnName: String): UserCF = {
+    this.ratingColumnName = ratingColumnName
+    this
+  }
+
+  def setMaxItemRelatedUser(maxItemRelatedUser: Int): UserCF = {
+    this.maxItemRelatedUser = maxItemRelatedUser
+    this
+  }
+
+  def setMaxSimUserNum(maxSimUserNum: Int): UserCF = {
+    this.maxSimUserNum = maxSimUserNum
+    this
+  }
+
+  def setImplicitPrefs(implicitPrefs: Boolean): UserCF = {
+    this.implicitPrefs = implicitPrefs
+    this
+  }
+
+  def setMinCommonItemNum(minCommonItemNum: Int): UserCF = {
+    this.minCommonItemNum = minCommonItemNum
+    this
+  }
+
+  def setShrinkDownSimilarityLambda(shrinkDownSimilarityLambda: Double): UserCF = {
+    this.shrinkDownSimilarityLambda = shrinkDownSimilarityLambda
+    this
   }
 
   /**
@@ -133,21 +101,15 @@ class UserCF extends U2IMatch {
    */
   private var userSimilarityDF: DataFrame = _
 
-  private def setUserSimilarityDF(userSimilarityDF: DataFrame): UserCF = {
-    this.userSimilarityDF = userSimilarityDF
-    this
-  }
-
   def fit(rawDataDF: DataFrame): UserCF = {
     val spark = rawDataDF.sparkSession
     this.spark = spark
     import spark.implicits._
 
-    val dataDF = rawDataDF
+    this.dataDF = rawDataDF
       .groupBy(userColumnName, itemColumnName)
       .agg(max(ratingColumnName).as(ratingColumnName))
       .persist(StorageLevel.MEMORY_AND_DISK)
-    this.dataDF = dataDF
 
     // 统计基本信息
     println(s"[${this.getClass.getSimpleName}.fit] dataDF.size:${dataDF.count()}")
@@ -168,26 +130,27 @@ class UserCF extends U2IMatch {
       .groupByKey()
       .filter(_._2.size >= 2)
       .map(row => {
-      if (row._2.size > maxItemRelatedUser) {
-        println(s"[${this.getClass.getSimpleName}.fit], item:${row._1}, userSize:${row._2.size}")
-        val userFrequencyValue = userFrequencyBroadcast.value
-        row._2.toSeq.sortBy(_._1)
-          .map(x => (x._1, x._2, userFrequencyValue.getOrElse(x._1, Long.MaxValue)))
-          .sortBy(_._3).map(x => (x._1, x._2))
-          .slice(0, maxItemRelatedUser)
-      } else {
-        row._2.toSeq.sortBy(_._1)
-      }
-    })
+        if (row._2.size > maxItemRelatedUser) {
+          println(s"[${this.getClass.getSimpleName}.fit], item:${row._1}, userSize:${row._2.size}")
+          val userFrequencyValue = userFrequencyBroadcast.value
+          row._2.toSeq.sortBy(_._1)
+            .map(x => (x._1, x._2, userFrequencyValue.getOrElse(x._1, Long.MaxValue)))
+            .sortBy(_._3).map(x => (x._1, x._2))
+            .slice(0, maxItemRelatedUser)
+        } else {
+          row._2.toSeq.sortBy(_._1)
+        }
+      })
       .flatMap(row => {
         val buffer = ArrayBuffer[((String, String), (Double, Double, Double, Int))]()
         val itemSet = row.sorted
         for (i <- 0.until(itemSet.size - 1)) {
-          val prefix = Random.nextInt(100) + "-"
+          //          val prefix = Random.nextInt(100) + "-"
           for (j <- (i + 1).until(itemSet.size)) {
             buffer.+=(
               (
-                (prefix + itemSet(i)._1, itemSet(j)._1)
+                //                (prefix + itemSet(i)._1, itemSet(j)._1)
+                (itemSet(i)._1, itemSet(j)._1)
                 , (itemSet(i)._2 * itemSet(j)._2, math.pow(itemSet(i)._2, 2.0), math.pow(itemSet(j)._2, 2.0), 1))
             )
           }
@@ -196,10 +159,11 @@ class UserCF extends U2IMatch {
       })
 
     // 计算用户相似度
-    val userSimilarityDF = coCccurrenceUserPairRDD
+    this.userSimilarityDF = coCccurrenceUserPairRDD
       .reduceByKey((x, y) => (x._1 + y._1, x._2 + y._2, x._3 + y._3, x._4 + y._4))
+      //      .map(x => ((x._1._1.split("-")(1), x._1._2), x._2))
+      //      .reduceByKey((x, y) => (x._1 + y._1, x._2 + y._2, x._3 + y._3, x._4 + y._4))
       .filter(_._2._4 >= minCommonItemNum)
-      .map(x => ((x._1._1.split("-")(1), x._1._2), x._2))
       .reduceByKey((x, y) => (x._1 + y._1, x._2 + y._2, x._3 + y._3, x._4 + y._4))
       .map(x => {
         val middleScore = x._2
@@ -234,8 +198,7 @@ class UserCF extends U2IMatch {
       .toDF("u1", "u2", "sim")
       .persist(StorageLevel.MEMORY_AND_DISK)
 
-    setUserSimilarityDF(userSimilarityDF)
-    println(s"[${this.getClass.getSimpleName}.fit] this.userSimilarityDF.size:${this.userSimilarityDF.count()}")
+    println(s"[${this.getClass.getSimpleName}.fit] this.userSimilarityDF.size:${userSimilarityDF.count()}")
     this.userSimilarityDF.show(30, false)
 
     this

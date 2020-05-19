@@ -168,11 +168,12 @@ class ItemCF extends I2IMatch with U2IMatch {
         val buffer = ArrayBuffer[((String, String), (Double, Double, Double, Int))]()
         val itemSet: Seq[(String, Double)] = row.sorted
         for (i <- 0.until(itemSet.size - 1)) {
-          val prefix = Random.nextInt(100) + "-"
           for (j <- (i + 1).until(itemSet.size)) {
+//            val prefix = "-" + Random.nextInt(100)
             buffer.+=(
               (
-                (prefix + itemSet(i)._1, itemSet(j)._1),
+//                (itemSet(i)._1 + prefix, itemSet(j)._1),
+                (itemSet(i)._1, itemSet(j)._1),
                 (itemSet(i)._2 * itemSet(j)._2,
                   math.pow(itemSet(i)._2, 2.0),
                   math.pow(itemSet(j)._2, 2.0),
@@ -187,11 +188,11 @@ class ItemCF extends I2IMatch with U2IMatch {
     // 计算物品相似度
     this.itemSimilarityDF = coCccurrenceItemPairRDD
       .reduceByKey((x, y) => (x._1 + y._1, x._2 + y._2, x._3 + y._3, x._4 + y._4))
-      .map(x => ((x._1._1.split("-")(1), x._1._2), x._2))
-      .reduceByKey((x, y) => (x._1 + y._1, x._2 + y._2, x._3 + y._3, x._4 + y._4))
+//      .map(x => ((x._1._1.split("-")(1), x._1._2), x._2))
+//      .reduceByKey((x, y) => (x._1 + y._1, x._2 + y._2, x._3 + y._3, x._4 + y._4))
       .filter(_._2._4 >= minCommonUserNum)
       .map(x => {
-        val middleScore = x._2
+        val middleScore: (Double, Double, Double, Int) = x._2
         if (implicitPrefs) {
           val itemFrequencyValue: Map[String, Long] = itemFrequencyBroadcast.value
           (x._1._1
