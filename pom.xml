@@ -55,12 +55,6 @@
         </dependency>
 
         <dependency>
-            <groupId>com.github.karlhigley</groupId>
-            <artifactId>spark-neighbors_2.10</artifactId>
-            <version>0.2.2</version>
-        </dependency>
-
-        <dependency>
             <groupId>ml.dmlc</groupId>
             <artifactId>xgboost4j-spark</artifactId>
             <version>0.81</version>

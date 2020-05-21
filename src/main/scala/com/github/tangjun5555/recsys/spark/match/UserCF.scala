@@ -124,8 +124,8 @@ class UserCF extends U2IMatch {
     println(s"[${this.getClass.getSimpleName}.fit] userFrequency:${userFrequency.slice(0, 10).mkString(",")}")
     val userFrequencyBroadcast: Broadcast[Map[String, Long]] = spark.sparkContext.broadcast(userFrequency)
 
-    // 通过item倒排索引计算user pair
-    val coCccurrenceUserPairRDD: RDD[((String, String), (Double, Double, Double, Int))] = dataDF
+    // 计算用户相似度
+    this.userSimilarityDF = dataDF
       .rdd.map(row => (row.getAs[String](itemColumnName), (row.getAs[String](userColumnName), row.getAs[Double](ratingColumnName))))
       .groupByKey()
       .filter(_._2.size >= 2)
@@ -157,9 +157,6 @@ class UserCF extends U2IMatch {
         }
         buffer
       })
-
-    // 计算用户相似度
-    this.userSimilarityDF = coCccurrenceUserPairRDD
       .reduceByKey((x, y) => (x._1 + y._1, x._2 + y._2, x._3 + y._3, x._4 + y._4))
       //      .map(x => ((x._1._1.split("-")(1), x._1._2), x._2))
       //      .reduceByKey((x, y) => (x._1 + y._1, x._2 + y._2, x._3 + y._3, x._4 + y._4))
