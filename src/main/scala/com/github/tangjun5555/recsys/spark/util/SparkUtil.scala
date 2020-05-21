@@ -1,7 +1,7 @@
 package com.github.tangjun5555.recsys.spark.util
 
 import org.apache.log4j.{Level, Logger}
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{DataFrame, SparkSession}
 
 /**
  * author: tangjun 1844250138@qq.com
@@ -36,6 +36,14 @@ object SparkUtil {
       .appName(name)
       .enableHiveSupport()
       .getOrCreate()
+  }
+
+  def writeDF2TFRecords(df: DataFrame, path: String): Unit = {
+    df.write
+      .format("tfrecords")
+      .mode("overwrite")
+      .option("recordType", "Example")
+      .save(path)
   }
 
 }

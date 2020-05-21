@@ -59,6 +59,12 @@
             <artifactId>xgboost4j-spark</artifactId>
             <version>0.81</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.tensorflow</groupId>
+            <artifactId>spark-tensorflow-connector_2.11</artifactId>
+            <version>1.13.1</version>
+        </dependency>
     </dependencies>
 
     <build>
