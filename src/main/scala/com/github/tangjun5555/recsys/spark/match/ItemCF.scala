@@ -7,7 +7,6 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.storage.StorageLevel
 
 import scala.collection.mutable.ArrayBuffer
-import scala.util.Random
 
 /**
  * author: tangj
@@ -120,9 +119,7 @@ class ItemCF extends I2IMatch with U2IMatch {
     this.itemSimilarityDF
   }
 
-  def fit(
-           rawDataDF: DataFrame
-         ): this.type = {
+  def fit(rawDataDF: DataFrame): this.type = {
     val spark = rawDataDF.sparkSession
     this.spark = spark
     import spark.implicits._
@@ -146,63 +143,100 @@ class ItemCF extends I2IMatch with U2IMatch {
     println(s"[${this.getClass.getSimpleName}.fit] itemFrequency:${itemFrequency.slice(0, 10).mkString(",")}")
     val itemFrequencyBroadcast: Broadcast[Map[String, Long]] = spark.sparkContext.broadcast(itemFrequency)
 
-    // 通过user倒排索引计算item pair
-    val coCccurrenceItemPairRDD: RDD[((String, String), (Double, Double, Double, Int))] = dataDF
-      .rdd.map(row => (row.getAs[String](userColumnName), (row.getAs[String](itemColumnName), row.getAs[Double](ratingColumnName))))
-      .groupByKey()
-      .filter(_._2.size >= 2)
-      .map(row => {
-        // 避免产生过多的pair对
-        if (row._2.size > maxUserRelatedItem) {
-          println(s"[${this.getClass.getSimpleName}.fit], user:${row._1}, itemSize:${row._2.size}")
-          val itemFrequencyValue = itemFrequencyBroadcast.value
-          row._2.toSeq.sortBy(_._1)
-            .map(x => (x._1, x._2, itemFrequencyValue.getOrElse(x._1, Long.MaxValue)))
-            .sortBy(_._3).map(x => (x._1, x._2))
-            .slice(0, maxUserRelatedItem)
-        } else {
-          row._2.toSeq.sortBy(_._1)
-        }
-      })
-      .flatMap(row => {
-        val buffer = ArrayBuffer[((String, String), (Double, Double, Double, Int))]()
-        val itemSet: Seq[(String, Double)] = row.sorted
-        for (i <- 0.until(itemSet.size - 1)) {
-          for (j <- (i + 1).until(itemSet.size)) {
-//            val prefix = "-" + Random.nextInt(100)
-            buffer.+=(
-              (
-//                (itemSet(i)._1 + prefix, itemSet(j)._1),
-                (itemSet(i)._1, itemSet(j)._1),
-                (itemSet(i)._2 * itemSet(j)._2,
-                  math.pow(itemSet(i)._2, 2.0),
-                  math.pow(itemSet(j)._2, 2.0),
-                  1)
-              )
-            )
-          }
-        }
-        buffer
-      })
-
     // 计算物品相似度
-    this.itemSimilarityDF = coCccurrenceItemPairRDD
-      .reduceByKey((x, y) => (x._1 + y._1, x._2 + y._2, x._3 + y._3, x._4 + y._4))
-//      .map(x => ((x._1._1.split("-")(1), x._1._2), x._2))
-//      .reduceByKey((x, y) => (x._1 + y._1, x._2 + y._2, x._3 + y._3, x._4 + y._4))
-      .filter(_._2._4 >= minCommonUserNum)
-      .map(x => {
-        val middleScore: (Double, Double, Double, Int) = x._2
-        if (implicitPrefs) {
+    this.itemSimilarityDF = if (implicitPrefs) {
+      dataDF
+        .rdd.map(row => (row.getAs[String](userColumnName), (row.getAs[String](itemColumnName), row.getAs[Double](ratingColumnName))))
+        .groupByKey()
+        .filter(_._2.size >= 2)
+        .map(row => {
+          // 避免产生过多的pair对
+          if (row._2.size > maxUserRelatedItem) {
+            println(s"[${this.getClass.getSimpleName}.fit], user:${row._1}, itemSize:${row._2.size}")
+            val itemFrequencyValue = itemFrequencyBroadcast.value
+            row._2.toSeq.sortBy(_._1)
+              .map(x => (x._1, x._2, itemFrequencyValue.getOrElse(x._1, Long.MaxValue)))
+              .sortBy(_._3).map(x => (x._1, x._2))
+              .slice(0, maxUserRelatedItem)
+          } else {
+            row._2.toSeq.sortBy(_._1)
+          }
+        })
+        .flatMap(row => {
+          val buffer = ArrayBuffer[((String, String), Int)]()
+          val itemSet: Seq[(String, Double)] = row.sorted
+          for (i <- 0.until(itemSet.size - 1)) {
+            for (j <- (i + 1).until(itemSet.size)) {
+              buffer.+=(
+                ((itemSet(i)._1, itemSet(j)._1), 1)
+              )
+            }
+          }
+          buffer
+        })
+        .reduceByKey(_ + _)
+        .filter(_._2 >= minCommonUserNum)
+        .map(x => {
           val itemFrequencyValue: Map[String, Long] = itemFrequencyBroadcast.value
           (x._1._1
             , x._1._2
             , shrinkDownSimilarity(
-            middleScore._4 * 1.0 / (itemFrequencyValue(x._1._1) + itemFrequencyValue(x._1._2) - middleScore._4)
-            , middleScore._4
+            x._2 * 1.0 / (itemFrequencyValue(x._1._1) + itemFrequencyValue(x._1._2) - x._2)
+            , x._2
             , shrinkDownSimilarityLambda)
           )
-        } else {
+        })
+        .flatMap(x => Seq(
+          (x._1, (x._2, x._3)),
+          (x._2, (x._1, x._3)))
+        )
+        .groupByKey()
+        .flatMap(x => {
+          x._2.toSeq.sortBy(_._2).reverse.slice(0, maxSimItemNum)
+            .map(y => (x._1, y._1, y._2))
+        })
+        .toDF("i1", "i2", "sim")
+        .persist(StorageLevel.MEMORY_AND_DISK)
+    } else {
+      dataDF
+        .rdd.map(row => (row.getAs[String](userColumnName), (row.getAs[String](itemColumnName), row.getAs[Double](ratingColumnName))))
+        .groupByKey()
+        .filter(_._2.size >= 2)
+        .map(row => {
+          // 避免产生过多的pair对
+          if (row._2.size > maxUserRelatedItem) {
+            println(s"[${this.getClass.getSimpleName}.fit], user:${row._1}, itemSize:${row._2.size}")
+            val itemFrequencyValue = itemFrequencyBroadcast.value
+            row._2.toSeq.sortBy(_._1)
+              .map(x => (x._1, x._2, itemFrequencyValue.getOrElse(x._1, Long.MaxValue)))
+              .sortBy(_._3).map(x => (x._1, x._2))
+              .slice(0, maxUserRelatedItem)
+          } else {
+            row._2.toSeq.sortBy(_._1)
+          }
+        })
+        .flatMap(row => {
+          val buffer = ArrayBuffer[((String, String), (Double, Double, Double, Int))]()
+          val itemSet: Seq[(String, Double)] = row.sorted
+          for (i <- 0.until(itemSet.size - 1)) {
+            for (j <- (i + 1).until(itemSet.size)) {
+              buffer.+=(
+                (
+                  (itemSet(i)._1, itemSet(j)._1),
+                  (itemSet(i)._2 * itemSet(j)._2,
+                    math.pow(itemSet(i)._2, 2.0),
+                    math.pow(itemSet(j)._2, 2.0),
+                    1)
+                )
+              )
+            }
+          }
+          buffer
+        })
+        .reduceByKey((x, y) => (x._1 + y._1, x._2 + y._2, x._3 + y._3, x._4 + y._4))
+        .filter(_._2._4 >= minCommonUserNum)
+        .map(x => {
+          val middleScore: (Double, Double, Double, Int) = x._2
           (x._1._1
             , x._1._2
             , shrinkDownSimilarity(
@@ -210,19 +244,19 @@ class ItemCF extends I2IMatch with U2IMatch {
             , middleScore._4
             , shrinkDownSimilarityLambda)
           )
-        }
-      })
-      .flatMap(x => Seq(
-        (x._1, (x._2, x._3)),
-        (x._2, (x._1, x._3)))
-      )
-      .groupByKey()
-      .flatMap(x => {
-        x._2.toSeq.sortBy(_._2).reverse.slice(0, maxSimItemNum)
-          .map(y => (x._1, y._1, y._2))
-      })
-      .toDF("i1", "i2", "sim")
-      .persist(StorageLevel.MEMORY_AND_DISK)
+        })
+        .flatMap(x => Seq(
+          (x._1, (x._2, x._3)),
+          (x._2, (x._1, x._3)))
+        )
+        .groupByKey()
+        .flatMap(x => {
+          x._2.toSeq.sortBy(_._2).reverse.slice(0, maxSimItemNum)
+            .map(y => (x._1, y._1, y._2))
+        })
+        .toDF("i1", "i2", "sim")
+        .persist(StorageLevel.MEMORY_AND_DISK)
+    }
 
     println(s"[${this.getClass.getSimpleName}.fit] this.itemSimilarityDF.size:${this.itemSimilarityDF.count()}")
     this.itemSimilarityDF.show(30, false)

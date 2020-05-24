@@ -17,7 +17,7 @@ object VectorUtil {
         if (v.offset == 0 && v.stride == 1 && v.length == v.data.length) {
           new MLDenseVector(v.data)
         } else {
-          new MLDenseVector(v.toArray)  // Can't use underlying array directly, so make a new one
+          new MLDenseVector(v.toArray)
         }
       case v: BSV[Double] =>
         if (v.index.length == v.used) {
@@ -29,7 +29,6 @@ object VectorUtil {
         sys.error("Unsupported Breeze vector type: " + v.getClass.getName)
     }
   }
-
 
   def toBreeze(mllibVec: Vector): BV[Double] = new BDV[Double](mllibVec.toDense.values)
 
