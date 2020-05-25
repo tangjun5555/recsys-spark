@@ -1,7 +1,6 @@
 package com.github.tangjun5555.recsys.spark.`match`
 
 import org.apache.spark.broadcast.Broadcast
-import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.storage.StorageLevel
@@ -54,6 +53,7 @@ class ItemCF extends I2IMatch with U2IMatch {
   private var implicitPrefs: Boolean = true
 
   /**
+   * 用户最多正反馈物品数量
    * 控制物品共现矩阵的大小
    */
   private var maxUserRelatedItem: Int = 1000
@@ -63,10 +63,14 @@ class ItemCF extends I2IMatch with U2IMatch {
    */
   private var maxSimItemNum: Int = 20
 
+  /**
+   * 物品最小共现用户数量
+   * 控制物品相似度计算精度
+   */
   private var minCommonUserNum: Int = 5
 
   /**
-   * 相似度校准
+   * 相似度校准参数
    */
   private var shrinkDownSimilarityLambda: Double = 50.0
 
@@ -163,16 +167,9 @@ class ItemCF extends I2IMatch with U2IMatch {
           }
         })
         .flatMap(row => {
-          val buffer = ArrayBuffer[((String, String), Int)]()
           val itemSet: Seq[(String, Double)] = row.sorted
-          for (i <- 0.until(itemSet.size - 1)) {
-            for (j <- (i + 1).until(itemSet.size)) {
-              buffer.+=(
-                ((itemSet(i)._1, itemSet(j)._1), 1)
-              )
-            }
-          }
-          buffer
+          for {i <- 0.until(itemSet.size - 1); j <- (i + 1).until(itemSet.size)}
+            yield ((itemSet(i)._1, itemSet(j)._1), 1)
         })
         .reduceByKey(_ + _)
         .filter(_._2 >= minCommonUserNum)
