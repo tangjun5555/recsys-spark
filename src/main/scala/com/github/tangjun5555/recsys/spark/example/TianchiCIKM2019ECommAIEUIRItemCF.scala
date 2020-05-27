@@ -47,7 +47,17 @@ object TianchiCIKM2019ECommAIEUIRItemCF {
          |""".stripMargin)
       .show(10, false)
 
+    val validUserDF = spark.sql(
+      s"""
+         |select distinct user_id
+         |from allDataDF
+         |where timestamp<=1209600
+         |order by user_id
+         |limit 10000
+         |""".stripMargin)
+
     val trainDataDF = allDataDF.filter("timestamp<=1209600")
+        .join(validUserDF, Seq("user_id"), "inner")
     trainDataDF.createTempView("trainDataDF")
 
     val validDataDF = allDataDF.filter("timestamp>1209600")
