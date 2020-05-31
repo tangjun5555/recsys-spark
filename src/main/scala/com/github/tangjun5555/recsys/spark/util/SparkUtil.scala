@@ -20,7 +20,7 @@ object SparkUtil {
 
   def getLocalSparkSession(name: String, cores: Int = 3, logLevel: Level = Level.INFO): SparkSession = {
     Logger.getLogger("org.apache.spark").setLevel(logLevel)
-    System.setProperty("hadoop.home.dir", System.getenv("hadoop_home"))
+    System.setProperty("hadoop.home.dir", System.getenv("HADOOP_HOME"))
     SparkSession
       .builder()
       .appName(name)
