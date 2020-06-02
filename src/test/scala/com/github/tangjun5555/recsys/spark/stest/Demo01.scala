@@ -13,18 +13,51 @@ import scala.util.Random
  */
 object Demo01 {
 
-  private def randomSample(values: Array[(Long, Double)]): Long = {
-    var r = Random.nextDouble() * values.map(_._2).sum
-    println(r)
-    var result = values(0)._1
-    for (i <- values.indices if r > 0.0) {
-      r = r - values(i)._2
-      result = values(i)._1
+  /**
+   * 处理连续特征
+   *
+   * @param value
+   * @return
+   */
+  def transformDense(value: Double): Int = {
+    if (value < 0.0) {
+      0
+    } else if (value == 0.0) {
+      1
+    } else if (value < 2.0) {
+      2
+    } else {
+      3 + Math.pow(Math.log(value), 2.0).toInt
     }
-    result
   }
 
   def main(args: Array[String]): Unit = {
+
+//    val buffer = ArrayBuffer[(String, Int)]()
+//    buffer.append(
+//      ("a", 1)
+//    )
+//    buffer.append(
+//      ("b", 2)
+//    )
+//    buffer.append(
+//      ("c", 3)
+//    )
+//    buffer.append(
+//      ("d", 4)
+//    )
+//    println(buffer.mkString(","))
+
+    println(transformDense(2.0))
+    println(transformDense(2.1))
+    println(transformDense(2.8))
+    println(transformDense(3.2))
+    println(transformDense(3.8))
+//
+//    println(4.7.toInt)
+
+
+//    println(System.getProperties.getProperty("os.name"))
 //    val pathBuffer = new ArrayBuffer[Long]()
 //    println(pathBuffer.isEmpty)
 //    println(pathBuffer.length)
@@ -35,8 +68,8 @@ object Demo01 {
 //    println(pathBuffer.length)
 //    println(pathBuffer.size)
 
-    val t1 = Seq("a,b", "c,d").flatMap(_.split(","))
-    println(t1.mkString(","))
+//    val t1 = Seq("a,b", "c,d").flatMap(_.split(","))
+//    println(t1.mkString(","))
 
 
 //    val v1 = Array("a", "b")

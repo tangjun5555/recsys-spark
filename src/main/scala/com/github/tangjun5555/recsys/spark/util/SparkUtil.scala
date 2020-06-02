@@ -11,7 +11,8 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 object SparkUtil {
 
   def getSparkSession(name: String, cores: Int = 3, logLevel: Level = Level.INFO): SparkSession = {
-    if (System.getProperties.getProperty("os.name").contains("Windows")) {
+    if (System.getProperties.getProperty("os.name").contains("Windows")
+      || System.getProperties.getProperty("os.name").contains("Mac OS")) {
       getLocalSparkSession(name, cores, logLevel)
     } else {
       getClusterSparkSession(name, logLevel)

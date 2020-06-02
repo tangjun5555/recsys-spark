@@ -20,4 +20,8 @@ public class JavaTimeUtil {
         return Integer.parseInt(ChronoUnit.SECONDS.between(t1, t2) + "");
     }
 
+    public static String getCurrentDateTime() {
+        return LocalDateTime.now().format(formatter2);
+    }
+
 }
