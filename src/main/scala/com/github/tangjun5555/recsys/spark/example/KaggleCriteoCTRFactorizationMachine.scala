@@ -21,7 +21,7 @@ import scala.util.Random
  * 数据集说明:
  *
  */
-object CriteoCTRFactorizationMachine {
+object KaggleCriteoCTRFactorizationMachine {
 
   val labelColumnName: String = "label"
   val denseFeatureColumnName: Seq[String] = 1.to(13).map(x => s"i${x}")

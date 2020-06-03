@@ -18,7 +18,7 @@ import scala.util.Random
  * time: 2020/5/16 19:47
  * description:
  */
-object CriteoCTRXGBoostBinaryClassifier {
+object KaggleCriteoCTRXGBoostBinaryClassifier {
 
   val labelColumnName: String = "label"
   val denseFeatureColumnName: Seq[String] = 1.to(13).map(x => s"i${x}")
