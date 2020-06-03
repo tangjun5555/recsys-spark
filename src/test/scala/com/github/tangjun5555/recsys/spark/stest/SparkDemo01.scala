@@ -12,7 +12,7 @@ import org.apache.spark.rdd.RDD
 object SparkDemo01 {
 
   def main(args: Array[String]): Unit = {
-    val spark = SparkUtil.getLocalSparkSession(this.getClass.getSimpleName, 3, Level.ERROR)
+    val spark = SparkUtil.getLocalSparkSession(this.getClass.getSimpleName, Level.ERROR)
 
     val dataRDD = spark.sparkContext.parallelize(0.until(100))
     val sample: RDD[Int] = 0.until(10).map(i => {

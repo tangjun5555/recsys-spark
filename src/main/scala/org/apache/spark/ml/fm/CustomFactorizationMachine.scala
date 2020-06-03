@@ -72,6 +72,11 @@ class CustomFactorizationMachine extends Serializable {
    */
   private var optimMethod: String = "GradientDescent"
 
+  /**
+   * 可用 GradientDescent、LBFGS
+   * @param value
+   * @return
+   */
   def setOptimizer(value: String): this.type = {
     this.optimMethod = value
     this

@@ -21,7 +21,7 @@ import scala.util.Random
  * 数据集说明:
  *
  */
-object CriteoFactorizationMachine {
+object CriteoCTRFactorizationMachine {
 
   val labelColumnName: String = "label"
   val denseFeatureColumnName: Seq[String] = 1.to(13).map(x => s"i${x}")
@@ -138,7 +138,7 @@ object CriteoFactorizationMachine {
       spark.read
         .option("header", true)
         .option("inferSchema", true.toString)
-        .csv(transformDataDFReadPath)
+        .csv(s"${transformDataDFReadPath}/*.csv")
         .persist(StorageLevel.MEMORY_AND_DISK)
     }
 
@@ -200,7 +200,7 @@ object CriteoFactorizationMachine {
       .setFactorDim(4)
       .setRegularizationType("L1")
       .setLearningRate(0.01)
-      .setOptimizer("LBFGS")
+      .setOptimizer("GradientDescent")
       .fit(trainDF)
 
     val trainPreDF = model.predict(trainDF)

@@ -10,16 +10,16 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
  */
 object SparkUtil {
 
-  def getSparkSession(name: String, cores: Int = 3, logLevel: Level = Level.INFO): SparkSession = {
+  def getSparkSession(name: String, cores: Int = 3, logLevel: Level = Level.INFO, driverMemory: String = "2g"): SparkSession = {
     if (System.getProperties.getProperty("os.name").contains("Windows")
       || System.getProperties.getProperty("os.name").contains("Mac OS")) {
-      getLocalSparkSession(name, cores, logLevel)
+      getLocalSparkSession(name, logLevel, cores, driverMemory)
     } else {
       getClusterSparkSession(name, logLevel)
     }
   }
 
-  def getLocalSparkSession(name: String, cores: Int = 3, logLevel: Level = Level.INFO): SparkSession = {
+  def getLocalSparkSession(name: String, logLevel: Level = Level.INFO, cores: Int = 3, driverMemory: String = "2g"): SparkSession = {
     Logger.getLogger("org.apache.spark").setLevel(logLevel)
     System.setProperty("hadoop.home.dir", System.getenv("HADOOP_HOME"))
     SparkSession
@@ -27,6 +27,7 @@ object SparkUtil {
       .appName(name)
       .master(s"local[${cores}]")
       .config("spark.sql.warehouse.dir", "warehouse")
+      .config("spark.driver.memory", driverMemory)
       .getOrCreate()
   }
 

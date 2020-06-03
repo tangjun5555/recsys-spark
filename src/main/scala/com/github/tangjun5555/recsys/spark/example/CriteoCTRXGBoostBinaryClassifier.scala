@@ -18,7 +18,7 @@ import scala.util.Random
  * time: 2020/5/16 19:47
  * description:
  */
-object CriteoXGBoostBinaryClassifier {
+object CriteoCTRXGBoostBinaryClassifier {
 
   val labelColumnName: String = "label"
   val denseFeatureColumnName: Seq[String] = 1.to(13).map(x => s"i${x}")
@@ -34,7 +34,7 @@ object CriteoXGBoostBinaryClassifier {
 
     val spark = SparkUtil.getSparkSession(this.getClass.getSimpleName, cores = 5, logLevel = Level.INFO)
     import spark.implicits._
-    spark.udf.register("transformDense", transformDense _)
+
     spark.udf.register("transformSparse", transformSparse _)
 
     val sparseFeatureMap: Map[String, Seq[String]] = spark.sparkContext.textFile(featureMapFile)
@@ -88,20 +88,6 @@ object CriteoXGBoostBinaryClassifier {
         s"""
            |select *
            |
-           |  , transformDense(i1) i1_new
-           |  , transformDense(i2) i2_new
-           |  , transformDense(i3) i3_new
-           |  , transformDense(i4) i4_new
-           |  , transformDense(i5) i5_new
-           |  , transformDense(i6) i6_new
-           |  , transformDense(i7) i7_new
-           |  , transformDense(i8) i8_new
-           |  , transformDense(i9) i9_new
-           |  , transformDense(i10) i10_new
-           |  , transformDense(i11) i11_new
-           |  , transformDense(i12) i12_new
-           |  , transformDense(i13) i13_new
-           |
            |  , transformSparse(c1, '${sparseFeatureMap("c1").mkString(",")}') c1_new
            |  , transformSparse(c2, '${sparseFeatureMap("c2").mkString(",")}') c2_new
            |  , transformSparse(c3, '${sparseFeatureMap("c3").mkString(",")}') c3_new
@@ -135,7 +121,7 @@ object CriteoXGBoostBinaryClassifier {
       spark.read
         .option("header", true)
         .option("inferSchema", true.toString)
-        .csv(transformDataDFReadPath)
+        .csv(s"${transformDataDFReadPath}/*.csv")
         .persist(StorageLevel.MEMORY_AND_DISK)
     }
 
@@ -151,33 +137,20 @@ object CriteoXGBoostBinaryClassifier {
     transformDataDF.createTempView("transformDataDF")
     transformDataDF.show(30, false)
 
-    val denseVocabSizeMap: Map[String, Int] = denseFeatureColumnName.map(x => {
-      (x,
-        spark.sql(
-          s"""
-             |select max(${x}_new)
-             |from transformDataDF
-             |""".stripMargin)
-          .rdd.map(_.getAs[Int](0)).collect()(0) + 1
-      )
-    })
-      .toMap
-    println(s"denseVocabSizeMap:${denseVocabSizeMap.toSeq.sortBy(_._1).mkString(",")}")
-
     val sparseVocabSizeMap: Map[String, Int] = sparseFeatureMap.mapValues(_.size + 1)
     println(s"sparseVocabSizeMap:${sparseVocabSizeMap.toSeq.sortBy(_._1).mkString(",")}")
-
-    val allVocabSizeMap: Map[String, Int] = denseVocabSizeMap.++(sparseVocabSizeMap)
-    println(s"allVocabSizeMap:${allVocabSizeMap.toSeq.sortBy(_._1).mkString(",")}")
-    val allVocabSizeMapBroadcast: Broadcast[Map[String, Int]] = spark.sparkContext.broadcast(allVocabSizeMap)
+    val sparseVocabSizeMapBroadcast: Broadcast[Map[String, Int]] = spark.sparkContext.broadcast(sparseVocabSizeMap)
 
     val modelDataDF = transformDataDF.rdd.map(row => {
       val label: Double = row.getAs[Int](labelColumnName).toDouble
-      val values: Map[String, Int] = denseFeatureColumnName.++(sparseFeatureColumnName).map(x => {
+      val denseValues: Map[String, Double] = denseFeatureColumnName.map(x => {
+        (x, row.getAs[Double](x))
+      }).toMap
+      val sparseValues: Map[String, Int] = sparseFeatureColumnName.map(x => {
         (x, row.getAs[Int](s"${x}_new"))
       })
         .toMap
-      (label, combineAllFeature(values, allVocabSizeMapBroadcast.value))
+      (label, combineAllFeature(denseValues, sparseValues, sparseVocabSizeMapBroadcast.value))
     })
       .zipWithIndex()
       .map(x => (x._2.toString, x._1._1, x._1._2))
@@ -211,25 +184,6 @@ object CriteoXGBoostBinaryClassifier {
   }
 
   /**
-   * 处理连续特征
-   * 离散化
-   *
-   * @param value
-   * @return
-   */
-  def transformDense(value: Double): Int = {
-    if (value < 0.0) {
-      0
-    } else if (value == 0.0) {
-      1
-    } else if (value < 2.0) {
-      2
-    } else {
-      3 + Math.pow(Math.log(value), 2.0).toInt
-    }
-  }
-
-  /**
    * 处理离散特征
    * 缺失和频率少是两种情况
    *
@@ -251,25 +205,34 @@ object CriteoXGBoostBinaryClassifier {
   }
 
   /**
-   * 合并所有特征
    *
-   * @param values
-   * @param allVocabSizeMap
+   * @param denseValues
+   * @param sparseValues
+   * @param sparseVocabSizeMap
    * @return
    */
-  def combineAllFeature(values: Map[String, Int], allVocabSizeMap: Map[String, Int]): org.apache.spark.ml.linalg.Vector = {
+  def combineAllFeature(denseValues: Map[String, Double], sparseValues: Map[String, Int], sparseVocabSizeMap: Map[String, Int]): org.apache.spark.ml.linalg.Vector = {
     var prefix = 0
     val features = ArrayBuffer[(Int, Double)]()
-    for (x <- denseFeatureColumnName.++(sparseFeatureColumnName)) {
+
+    for (x <- denseFeatureColumnName) {
       features.append(
-        (prefix + values(x), 1.0)
+        (prefix, denseValues(x))
       )
-      prefix += allVocabSizeMap(x)
+      prefix += 1
     }
+
+    for (x <- sparseFeatureColumnName) {
+      features.append(
+        (prefix + sparseValues(x), 1.0)
+      )
+      prefix += sparseVocabSizeMap(x)
+    }
+
     if (Random.nextInt(1000) == 0) {
-      println(values, features)
+      println(denseValues, sparseValues, features)
     }
-    org.apache.spark.ml.linalg.Vectors.sparse(allVocabSizeMap.values.sum, features)
+    org.apache.spark.ml.linalg.Vectors.sparse(denseFeatureColumnName.size + sparseVocabSizeMap.values.sum, features)
   }
 
 }
