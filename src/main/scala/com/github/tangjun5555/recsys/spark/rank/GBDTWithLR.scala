@@ -5,6 +5,6 @@ package com.github.tangjun5555.recsys.spark.rank
  * time: 2020/6/2 1:48 下午
  * description:
  */
-object GBDTWithLR {
+class GBDTWithLR extends Serializable {
 
 }
