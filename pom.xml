@@ -6,14 +6,14 @@
 
     <groupId>com.github.tangjun5555</groupId>
     <artifactId>recsys-spark</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <java.version>1.8</java.version>
-        <scala.version>2.11.11</scala.version>
-        <spark.version>2.3.0</spark.version>
+        <scala.version>2.11.8</scala.version>
+        <spark.version>2.2.0</spark.version>
     </properties>
 
     <dependencies>

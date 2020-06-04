@@ -33,6 +33,11 @@ object Demo01 {
 
   def main(args: Array[String]): Unit = {
 
+    val dt = "20200602"
+    println(dt.slice(0, 4))
+    println(dt.slice(4, 6))
+    println(dt.slice(6, 8))
+
 //    val buffer = ArrayBuffer[(String, Int)]()
 //    buffer.append(
 //      ("a", 1)
@@ -48,11 +53,11 @@ object Demo01 {
 //    )
 //    println(buffer.mkString(","))
 
-    println(transformDense(2.0))
-    println(transformDense(2.1))
-    println(transformDense(2.8))
-    println(transformDense(3.2))
-    println(transformDense(3.8))
+//    println(transformDense(2.0))
+//    println(transformDense(2.1))
+//    println(transformDense(2.8))
+//    println(transformDense(3.2))
+//    println(transformDense(3.8))
 //
 //    println(4.7.toInt)
 
