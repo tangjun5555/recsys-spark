@@ -1,6 +1,6 @@
 package com.github.tangjun5555.recsys.spark.`match`
 
-import com.github.tangjun5555.recsys.spark.util.ConcatIdByRank
+import com.github.tangjun5555.recsys.spark.sqludf.ConcatIdByRank
 import org.apache.spark.sql.functions.{col, max, sum}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.storage.StorageLevel

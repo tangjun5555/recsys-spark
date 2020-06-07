@@ -1,11 +1,11 @@
-package com.github.tangjun5555.recsys.spark.util
+package com.github.tangjun5555.recsys.spark.sqludf
 
 import org.apache.spark.sql.Row
 import org.apache.spark.sql.expressions.{MutableAggregationBuffer, UserDefinedAggregateFunction}
 import org.apache.spark.sql.types._
 
 /**
-  * author: tangjun tangj@2345.com
+  * author: tangj 1844250138@qq.com
   * time: 2019/6/10 18:05
   * description:
   */

@@ -1,6 +1,8 @@
 package com.github.tangjun5555.recsys.spark.util
 
 import org.apache.log4j.{Level, Logger}
+import org.apache.spark.ml.Pipeline
+import org.apache.spark.sql.types.StructType
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 /**
@@ -40,12 +42,28 @@ object SparkUtil {
       .getOrCreate()
   }
 
+  /**
+   * 将DataFrame保存为TFRecords格式
+   * @param df
+   * @param path
+   */
   def writeDF2TFRecords(df: DataFrame, path: String): Unit = {
     df.write
       .format("tfrecords")
       .mode("overwrite")
       .option("recordType", "Example")
       .save(path)
+  }
+
+  /**
+   * TODO
+   * 将pipeline保存为pmml格式
+   * @param schema
+   * @param pipeline
+   * @param path
+   */
+  def pipeline2PMML(schema: StructType, pipeline: Pipeline, path: String): Unit = {
+
   }
 
 }
