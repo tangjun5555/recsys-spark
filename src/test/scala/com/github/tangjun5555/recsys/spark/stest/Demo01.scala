@@ -32,11 +32,14 @@ object Demo01 {
   }
 
   def main(args: Array[String]): Unit = {
+    println(1.0 / 0.0)
+    println(-1.0 / 0.0)
 
-    val dt = "20200602"
-    println(dt.slice(0, 4))
-    println(dt.slice(4, 6))
-    println(dt.slice(6, 8))
+
+//    val dt = "20200602"
+//    println(dt.slice(0, 4))
+//    println(dt.slice(4, 6))
+//    println(dt.slice(6, 8))
 
 //    val buffer = ArrayBuffer[(String, Int)]()
 //    buffer.append(

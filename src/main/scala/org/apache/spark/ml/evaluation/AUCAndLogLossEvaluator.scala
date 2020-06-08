@@ -20,19 +20,11 @@ class AUCAndLogLossEvaluator extends Serializable {
     this
   }
 
-  def getLabelColumnName(): String = {
-    this.labelColumnName
-  }
-
   private var predictionColumnName: String = "prediction"
 
   def setPredictionColumnName(value: String): this.type = {
     this.predictionColumnName = value
     this
-  }
-
-  def getPredictionColumnName(): String = {
-    this.predictionColumnName
   }
 
   def evaluate(predictions: DataFrame): (Double, Double) = {
@@ -41,7 +33,7 @@ class AUCAndLogLossEvaluator extends Serializable {
         (row.getAs[Double](predictionColumnName), row.getAs[Double](labelColumnName))
       )
       .persist(StorageLevel.MEMORY_AND_DISK)
-    val numSamples = scoreAndLabel.count().toInt
+    val numSamples: Int = scoreAndLabel.count().toInt
 
     val logloss: Double = scoreAndLabel.map(x => MathFunctionUtil.binaryLogLoss(x._2, x._1)).sum() / numSamples
     val auc: Double = new BinaryClassificationMetrics(scoreAndLabel).areaUnderROC()

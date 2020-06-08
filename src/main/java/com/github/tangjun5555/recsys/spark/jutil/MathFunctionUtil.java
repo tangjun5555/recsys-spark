@@ -16,9 +16,18 @@ public class MathFunctionUtil {
 
     public static double binaryLogLoss(double label, double probability) {
         assert Arrays.asList(0.0, 1.0).contains(label);
+        assert probability >= 0.0 && probability <= 1.0;
+        double v = 1e-7;
+
         if (label == 1.0) {
+            if (probability == 0.0) {
+                return -Math.log(v);
+            }
             return -Math.log(probability);
         } else {
+            if (probability == 1.0) {
+                return -Math.log(v);
+            }
             return -Math.log(1 - probability);
         }
     }
