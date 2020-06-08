@@ -6,7 +6,7 @@
 
     <groupId>com.github.tangjun5555</groupId>
     <artifactId>recsys-spark</artifactId>
-    <version>1.0.2</version>
+    <version>1.0.3</version>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -28,12 +28,6 @@
             <artifactId>spark-mllib_2.11</artifactId>
             <version>${spark.version}</version>
             <scope>provided</scope>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.jpmml</groupId>
-                    <artifactId>pmml-model</artifactId>
-                </exclusion>
-            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.apache.spark</groupId>
@@ -71,12 +65,6 @@
             <artifactId>spark-tensorflow-connector_2.11</artifactId>
             <version>1.13.1</version>
         </dependency>
-
-        <dependency>
-            <groupId>org.jpmml</groupId>
-            <artifactId>jpmml-sparkml</artifactId>
-            <version>1.3.15</version>
-        </dependency>
     </dependencies>
 
     <build>
@@ -111,31 +99,6 @@
                     <target>${java.version}</target>
                     <encoding>${project.build.sourceEncoding}</encoding>
                 </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-<!--                <version>${maven.shade.version}</version>-->
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                        <configuration>
-                            <relocations>
-                                <relocation>
-                                    <pattern>org.dmg.pmml</pattern>
-                                    <shadedPattern>org.shaded.dmg.pmml</shadedPattern>
-                                </relocation>
-                                <relocation>
-                                    <pattern>org.jpmml</pattern>
-                                    <shadedPattern>org.shaded.jpmml</shadedPattern>
-                                </relocation>
-                            </relocations>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>
