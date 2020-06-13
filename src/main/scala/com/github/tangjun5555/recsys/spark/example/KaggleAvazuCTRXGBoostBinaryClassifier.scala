@@ -142,7 +142,7 @@ object KaggleAvazuCTRXGBoostBinaryClassifier {
 
     val endTime = JavaTimeUtil.getCurrentDateTime
     println(s"startTime:${startTime}, endTime:${endTime}")
-    Thread.sleep(1000 * 1000)
+//    Thread.sleep(1000 * 1000)
     spark.stop()
   }
 

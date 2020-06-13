@@ -74,11 +74,11 @@ class XGBoostBinaryClassifier extends Serializable {
 
   /**
    * 加载之前训练好的模型
-   * TODO
    * @param modelFilePath
    * @return
    */
   def load(modelFilePath: String): this.type = {
+    this.xgboostModel = XGBoostClassificationModel.load(modelFilePath)
     this
   }
 
