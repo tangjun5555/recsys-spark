@@ -5,6 +5,6 @@ package com.github.tangjun5555.recsys.spark.rank
  * time: 2020/6/2 1:45 下午
  * description:
  */
-class FieldFactorizationMachine {
+class FieldFactorizationMachine extends Serializable {
 
 }

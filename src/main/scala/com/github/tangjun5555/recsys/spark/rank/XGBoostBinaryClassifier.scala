@@ -2,7 +2,6 @@ package com.github.tangjun5555.recsys.spark.rank
 
 import ml.dmlc.xgboost4j.scala.spark.{XGBoostClassificationModel, XGBoostClassifier}
 import org.apache.spark.ml.linalg.Vector
-import org.apache.spark.mllib.linalg
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.{col, udf}
 
@@ -20,10 +19,6 @@ class XGBoostBinaryClassifier extends Serializable {
     this
   }
 
-  def getLabelColumnName(): String = {
-    this.labelColumnName
-  }
-
   private var featuresColumnName: String = "features"
 
   def setFeaturesColumnName(value: String): this.type = {
@@ -31,19 +26,11 @@ class XGBoostBinaryClassifier extends Serializable {
     this
   }
 
-  def getFeaturesColumnName(): String = {
-    this.featuresColumnName
-  }
-
   private var predictionColumnName: String = "prediction"
 
   def setPredictionColumnName(value: String): this.type = {
     this.predictionColumnName = value
     this
-  }
-
-  def getPredictionColumnName(): String = {
-    this.predictionColumnName
   }
 
   private var params: Map[String, Any] = Map(
@@ -85,13 +72,24 @@ class XGBoostBinaryClassifier extends Serializable {
     }
   }
 
+  /**
+   * 加载之前训练好的模型
+   * TODO
+   * @param modelFilePath
+   * @return
+   */
   def load(modelFilePath: String): this.type = {
-
     this
   }
 
+  /**
+   * 保存模型
+   * 只能保存为二进制格式
+   * @param modelFilePath
+   * @return
+   */
   def save(modelFilePath: String): this.type = {
-
+    this.xgboostModel.save(modelFilePath)
     this
   }
 

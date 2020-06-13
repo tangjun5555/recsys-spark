@@ -19,19 +19,11 @@ class FMMatch extends UserEmbedding with ItemEmbedding {
     this
   }
 
-  def getLabelColumnName(): String = {
-    this.labelColumnName
-  }
-
   private var allFeaturesColumnName: String = "features"
 
   def setFeaturesColumnName(value: String): this.type = {
     this.allFeaturesColumnName = value
     this
-  }
-
-  def getFeaturesColumnName(): String = {
-    this.allFeaturesColumnName
   }
 
   private var userFeaturesColumnName: String = "userFeatures"
@@ -41,10 +33,6 @@ class FMMatch extends UserEmbedding with ItemEmbedding {
     this
   }
 
-  def getUserFeaturesColumnName(): String = {
-    this.userFeaturesColumnName
-  }
-
   private var itemFeaturesColumnName: String = "itemFeatures"
 
   def setItemFeaturesColumnName(value: String): this.type = {
@@ -52,19 +40,11 @@ class FMMatch extends UserEmbedding with ItemEmbedding {
     this
   }
 
-  def getItemFeaturesColumnName(): String = {
-    this.itemFeaturesColumnName
-  }
-
   private var sampleWeightColumnName: String = "sample_weight"
 
   def setSampleWeightColumnName(value: String): this.type = {
     this.sampleWeightColumnName = value
     this
-  }
-
-  def getSampleWeightColumnName(): String = {
-    this.sampleWeightColumnName
   }
 
   private var fm: FactorizationMachine = null
