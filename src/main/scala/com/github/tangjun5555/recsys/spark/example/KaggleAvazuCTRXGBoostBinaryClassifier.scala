@@ -37,7 +37,7 @@ object KaggleAvazuCTRXGBoostBinaryClassifier {
     val rawDataFile = args(0)
     val modelSavePath = args(1)
 
-    val spark = SparkUtil.getSparkSession(this.getClass.getSimpleName, cores = 5, logLevel = Level.WARN)
+    val spark = SparkUtil.getSparkSession(this.getClass.getSimpleName, cores = 5, logLevel = Level.INFO)
     import spark.implicits._
 
     spark.udf.register("getEventDate", getEventDate _)
@@ -49,7 +49,6 @@ object KaggleAvazuCTRXGBoostBinaryClassifier {
     val rawDataDF: DataFrame = spark.read.schema(schema)
       .option("header", true.toString)
       .csv(rawDataFile)
-      .drop("id")
       .persist(StorageLevel.MEMORY_AND_DISK)
     rawDataDF.createTempView("rawDataDF")
     rawDataDF.show(50, false)
@@ -106,7 +105,9 @@ object KaggleAvazuCTRXGBoostBinaryClassifier {
     rawDataDF.unpersist()
 
     val modelDataDF = transformDataDF.rdd.map(row => {
+      val id = row.getAs[String]("id")
       val event_date = row.getAs[String]("event_date")
+
       val label: Double = row.getAs[String](labelColumnName).toDouble
 
       val values: Map[String, Int] = featureNames.map(x => {
@@ -114,9 +115,9 @@ object KaggleAvazuCTRXGBoostBinaryClassifier {
       })
         .toMap
 
-      (event_date, label, combineAllFeature(values, featureEnumsBroadcast.value.map(x => (x._1, x._2.size + 1)).toMap))
+      (id, event_date, label, combineAllFeature(values, featureEnumsBroadcast.value.map(x => (x._1, x._2.size + 1)).toMap))
     })
-      .toDF("event_date", "label", "features")
+      .toDF("id", "event_date", "label", "features")
       .persist(StorageLevel.MEMORY_AND_DISK)
     modelDataDF.createTempView("modelDataDF")
     modelDataDF.show(30, false)
@@ -128,8 +129,9 @@ object KaggleAvazuCTRXGBoostBinaryClassifier {
     val model = new XGBoostBinaryClassifier()
       .fit(trainDF)
 
-    val trainPreDF = model.predict(trainDF)
+    val trainPreDF = model.predict(trainDF).persist(StorageLevel.MEMORY_AND_DISK)
 //    val validPreDF = model.predict(validDF)
+    trainPreDF.show(50, false)
 
     val evaluator = new AUCAndLogLossEvaluator()
     val (trainLogLoss, trainAUC) = evaluator.evaluate(trainPreDF)

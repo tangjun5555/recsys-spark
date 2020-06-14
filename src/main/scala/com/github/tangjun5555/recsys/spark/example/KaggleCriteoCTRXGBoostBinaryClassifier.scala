@@ -137,9 +137,9 @@ object KaggleCriteoCTRXGBoostBinaryClassifier {
     transformDataDF.createTempView("transformDataDF")
     transformDataDF.show(30, false)
 
-    val sparseVocabSizeMap: Map[String, Int] = sparseFeatureMap.mapValues(_.size + 1)
-    println(s"sparseVocabSizeMap:${sparseVocabSizeMap.toSeq.sortBy(_._1).mkString(",")}")
-    val sparseVocabSizeMapBroadcast: Broadcast[Map[String, Int]] = spark.sparkContext.broadcast(sparseVocabSizeMap)
+    val sparseVocabSize: Seq[(String, Int)] = sparseFeatureMap.mapValues(_.size + 1).toSeq.sortBy(_._1)
+    println(s"sparseVocabSize:${sparseVocabSize.mkString(",")}")
+    val sparseVocabSizeBroadcast: Broadcast[Seq[(String, Int)]] = spark.sparkContext.broadcast(sparseVocabSize)
 
     val modelDataDF = transformDataDF.rdd.map(row => {
       val label: Double = row.getAs[Int](labelColumnName).toDouble
@@ -150,7 +150,7 @@ object KaggleCriteoCTRXGBoostBinaryClassifier {
         (x, row.getAs[Int](s"${x}_new"))
       })
         .toMap
-      (label, combineAllFeature(denseValues, sparseValues, sparseVocabSizeMapBroadcast.value))
+      (label, combineAllFeature(denseValues, sparseValues, sparseVocabSizeBroadcast.value.toMap))
     })
       .zipWithIndex()
       .map(x => (x._2.toString, x._1._1, x._1._2))

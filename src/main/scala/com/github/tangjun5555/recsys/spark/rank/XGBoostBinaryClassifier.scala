@@ -37,6 +37,11 @@ class XGBoostBinaryClassifier extends Serializable {
     "objective" -> "binary:logistic"  // 目标函数
   )
 
+  def setNumWorkers(value: Int): this.type = {
+    this.params = this.params.+(("num_workers", value))
+    this
+  }
+
   private var xgboostModel: XGBoostClassificationModel = null
 
   /**

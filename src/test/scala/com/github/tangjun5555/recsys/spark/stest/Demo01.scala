@@ -32,8 +32,11 @@ object Demo01 {
   }
 
   def main(args: Array[String]): Unit = {
-    println(1.0 / 0.0)
-    println(-1.0 / 0.0)
+    println(System.getenv("HADOOP_HOME"))
+    println(System.getProperties.getProperty("os.name"))
+
+//    println(1.0 / 0.0)
+//    println(-1.0 / 0.0)
 
 
 //    val dt = "20200602"
