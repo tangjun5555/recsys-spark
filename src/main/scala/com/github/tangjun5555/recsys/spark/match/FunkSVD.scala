@@ -8,6 +8,12 @@ import org.apache.spark.storage.StorageLevel
  * author: tangjun 1844250138@qq.com
  * time: 2020/2/16 16:01
  * description:
+ *
+ * 显示反馈的损失函数:
+ *
+ * 隐式反馈的损失函数:
+ *
+ *
  */
 class FunkSVD extends UserEmbedding with ItemEmbedding {
 
@@ -23,15 +29,30 @@ class FunkSVD extends UserEmbedding with ItemEmbedding {
 
   private var vectorColumnName = "vector"
 
+  /**
+   * 最大迭代次数
+   */
   private var maxIter: Int = 20
 
+  /**
+   * 向量维度
+   */
   private var lantentVectorSize: Int = 16
 
+  /**
+   * 正则化参数
+   */
   private var regularization: Double = 0.01
 
-  private var alpha: Double = 1.0
-
+  /**
+   * 是否是隐式反馈
+   */
   private var implicitPrefs: Boolean = true
+
+  /**
+   * 隐式反馈的Cui的加权系数
+   */
+  private var alpha: Double = 1.0
 
   def setUserColumnName(value: String): this.type = {
     this.userColumnName = value
@@ -68,13 +89,13 @@ class FunkSVD extends UserEmbedding with ItemEmbedding {
     this
   }
 
-  def setAlpha(value: Double): this.type = {
-    this.alpha = value
+  def setImplicitPrefs(value: Boolean): this.type = {
+    this.implicitPrefs = value
     this
   }
 
-  def setImplicitPrefs(value: Boolean): this.type = {
-    this.implicitPrefs = value
+  def setAlpha(value: Double): this.type = {
+    this.alpha = value
     this
   }
 
@@ -92,19 +113,19 @@ class FunkSVD extends UserEmbedding with ItemEmbedding {
     this.dataDF = rawDataDF.select(userColumnName, itemColumnName, ratingColumnName)
       .distinct()
       .persist(StorageLevel.MEMORY_AND_DISK)
-    println(s"${this.getClass.getSimpleName} dataDF.size:${dataDF.count()}")
-    println(s"${this.getClass.getSimpleName} dataDF.user.size:${dataDF.select(userColumnName).distinct().count()}")
-    println(s"${this.getClass.getSimpleName} dataDF.item.size:${dataDF.select(itemColumnName).distinct().count()}")
+    println(s"${this.getClass.getSimpleName} fit, dataDF.size:${dataDF.count()}")
+    println(s"${this.getClass.getSimpleName} fit, dataDF.user.size:${dataDF.select(userColumnName).distinct().count()}")
+    println(s"${this.getClass.getSimpleName} fit, dataDF.item.size:${dataDF.select(itemColumnName).distinct().count()}")
 
-    val userDictDF = dataDF.rdd.map(_.getAs[String](userColumnName)).distinct()
+    val userDictDF: DataFrame = dataDF.rdd.map(_.getAs[String](userColumnName)).distinct()
       .collect().sorted.zipWithIndex.toSeq
       .toDF(userColumnName, userColumnName + "_index")
       .persist(StorageLevel.MEMORY_AND_DISK)
-    val itemDictDF = dataDF.rdd.map(_.getAs[String](itemColumnName)).distinct()
+    val itemDictDF: DataFrame = dataDF.rdd.map(_.getAs[String](itemColumnName)).distinct()
       .collect().sorted.zipWithIndex.toSeq
       .toDF(itemColumnName, itemColumnName + "_index")
       .persist(StorageLevel.MEMORY_AND_DISK)
-    val modelDataDF = dataDF
+    val modelDataDF: DataFrame = dataDF
       .join(userDictDF, Seq(userColumnName), "inner").drop(userColumnName)
       .join(itemDictDF, Seq(itemColumnName), "inner").drop(itemColumnName)
 
@@ -115,17 +136,17 @@ class FunkSVD extends UserEmbedding with ItemEmbedding {
 
       .setMaxIter(maxIter)
       .setRank(lantentVectorSize)
-
       .setRegParam(regularization)
+
+      .setImplicitPrefs(implicitPrefs)
       .setAlpha(alpha)
 
-      .setColdStartStrategy("drop")
       .setNumUserBlocks(spark.conf.get("spark.default.parallelism").toInt)
       .setNumItemBlocks(spark.conf.get("spark.default.parallelism").toInt)
-      .setImplicitPrefs(implicitPrefs)
 
-      .setNonnegative(true)
       .setSeed(555L)
+      .setNonnegative(true)
+      .setColdStartStrategy("drop")
 
       .fit(modelDataDF)
 
@@ -139,8 +160,8 @@ class FunkSVD extends UserEmbedding with ItemEmbedding {
       .select(itemColumnName, "features")
       .withColumnRenamed("features", vectorColumnName)
       .persist(StorageLevel.MEMORY_AND_DISK)
-    println(s"${this.getClass.getSimpleName} userFactorsDF:${userFactorsDF.head()}")
-    println(s"${this.getClass.getSimpleName} itemFactorsDF:${itemFactorsDF.head()}")
+    println(s"${this.getClass.getSimpleName} fit, userFactorsDF:${userFactorsDF.head()}")
+    println(s"${this.getClass.getSimpleName} fit, itemFactorsDF:${itemFactorsDF.head()}")
 
     this
   }
@@ -150,7 +171,7 @@ class FunkSVD extends UserEmbedding with ItemEmbedding {
     import spark.implicits._
     if (vectorAsString) {
       this.userFactorsDF
-        .rdd.map(row => (row.getAs[String](userColumnName), row.getAs[Seq[Float]](vectorColumnName).mkString(",")))
+        .rdd.map(row => (row.getAs[String](userColumnName), row.getAs[Seq[Float]](vectorColumnName).map(x => String.format("%.7f", java.lang.Double.valueOf(x))).mkString(",")))
         .toDF(userColumnName, vectorColumnName)
     } else {
       this.userFactorsDF
@@ -162,7 +183,7 @@ class FunkSVD extends UserEmbedding with ItemEmbedding {
     import spark.implicits._
     if (vectorAsString) {
       this.itemFactorsDF
-        .rdd.map(row => (row.getAs[String](itemColumnName), row.getAs[Seq[Float]](vectorColumnName).mkString(",")))
+        .rdd.map(row => (row.getAs[String](itemColumnName), row.getAs[Seq[Float]](vectorColumnName).map(x => String.format("%.7f", java.lang.Double.valueOf(x))).mkString(",")))
         .toDF(itemColumnName, vectorColumnName)
     } else {
       this.itemFactorsDF
