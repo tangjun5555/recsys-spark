@@ -40,6 +40,16 @@ object SparkUtil {
       .getOrCreate()
   }
 
+  def getODPSSparkSession(name: String, logLevel: Level = Level.INFO): SparkSession = {
+    Logger.getLogger("org.apache.spark").setLevel(logLevel)
+    SparkSession
+      .builder()
+      .appName(name)
+      .config("odps.exec.dynamic.partition.mode", "nonstrict")
+      .config("spark.sql.catalogImplementation", "odps")
+      .getOrCreate()
+  }
+
   /**
    * 将DataFrame保存为TFRecords格式
    * @param df

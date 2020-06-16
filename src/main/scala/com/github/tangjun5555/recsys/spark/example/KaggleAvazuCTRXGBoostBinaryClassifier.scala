@@ -6,7 +6,7 @@ import com.github.tangjun5555.recsys.spark.util.SparkUtil
 import org.apache.log4j.Level
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.ml.evaluation.AUCAndLogLossEvaluator
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.types.{StringType, StructField, StructType}
 import org.apache.spark.storage.StorageLevel
 
@@ -32,12 +32,16 @@ object KaggleAvazuCTRXGBoostBinaryClassifier {
   val featureNames = Seq("event_hour").++(columnNames.slice(3, columnNames.size))
 
   def main(args: Array[String]): Unit = {
+    println(s"运行参数:${args.mkString(",")}")
     val startTime = JavaTimeUtil.getCurrentDateTime
 
     val rawDataFile = args(0)
     val modelSavePath = args(1)
 
-    val spark = SparkUtil.getSparkSession(this.getClass.getSimpleName, cores = 5, logLevel = Level.INFO)
+    val spark = SparkUtil.getSparkSession(
+      name=this.getClass.getName.split("\\.").last.replace("$", ""),
+      cores=5,
+      logLevel=Level.INFO)
     import spark.implicits._
 
     spark.udf.register("getEventDate", getEventDate _)
@@ -49,6 +53,7 @@ object KaggleAvazuCTRXGBoostBinaryClassifier {
     val rawDataDF: DataFrame = spark.read.schema(schema)
       .option("header", true.toString)
       .csv(rawDataFile)
+      .drop("id")
       .persist(StorageLevel.MEMORY_AND_DISK)
     rawDataDF.createTempView("rawDataDF")
     rawDataDF.show(50, false)
@@ -127,6 +132,7 @@ object KaggleAvazuCTRXGBoostBinaryClassifier {
 //    val validDF = modelDataDF.filter(s"event_date >= 14103022").select("label", "features").persist(StorageLevel.MEMORY_AND_DISK)
 
     val model = new XGBoostBinaryClassifier()
+      .setNumWorkers(2)
       .fit(trainDF)
 
     val trainPreDF = model.predict(trainDF).persist(StorageLevel.MEMORY_AND_DISK)
