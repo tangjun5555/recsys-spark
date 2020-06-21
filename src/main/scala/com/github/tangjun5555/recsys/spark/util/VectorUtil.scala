@@ -2,7 +2,7 @@ package com.github.tangjun5555.recsys.spark.util
 
 import breeze.linalg.{DenseVector => BDV, SparseVector => BSV, Vector => BV}
 import org.apache.spark.mllib.linalg.{DenseVector, SparseVector, Vector}
-import org.apache.spark.ml.linalg.{DenseVector => MLDenseVector, SparseVector => MLSparseVector, Vectors => MLVectors, Vector => MLVector}
+import org.apache.spark.ml.linalg.{DenseVector => MLDenseVector, SparseVector => MLSparseVector, Vector => MLVector, Vectors => MLVectors}
 
 /**
  * author: tangj
@@ -10,6 +10,22 @@ import org.apache.spark.ml.linalg.{DenseVector => MLDenseVector, SparseVector =>
  * description:
  */
 object VectorUtil {
+
+  /**
+   * Compute the dot product between two vectors
+   */
+  def dot(x: MLVector, y: MLVector): Double = {
+    var result = 0.0
+    val v1 = x.toDense.values
+    val v2 = y.toDense.values
+
+    assert(v1.length ==  v2.length)
+
+    for (i <- v1.indices) {
+      result += v1(i) * v2(i)
+    }
+    result
+  }
 
   def breeze2MLVector(breezeVector: BV[Double]): MLVector = {
     breezeVector match {
