@@ -68,12 +68,6 @@
             <artifactId>spark-tensorflow-connector_2.11</artifactId>
             <version>1.13.1</version>
         </dependency>
-
-        <dependency>
-            <groupId>com.aliyun.odps</groupId>
-            <artifactId>hadoop-fs-oss</artifactId>
-            <version>${cupid.sdk.version}</version>
-        </dependency>
     </dependencies>
 
     <build>
@@ -111,11 +105,6 @@
                     </execution>
                 </executions>
             </plugin>
-
-<!--            <plugin>-->
-<!--                <groupId>org.apache.maven.plugins</groupId>-->
-<!--                <artifactId>maven-dependency-plugin</artifactId>-->
-<!--            </plugin>-->
 
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

@@ -54,6 +54,8 @@ class FunkSVD extends UserEmbedding with ItemEmbedding {
    */
   private var alpha: Double = 1.0
 
+  private var numBlocks: Int = 20
+
   def setUserColumnName(value: String): this.type = {
     this.userColumnName = value
     this
@@ -99,6 +101,11 @@ class FunkSVD extends UserEmbedding with ItemEmbedding {
     this
   }
 
+  def setNumBlocks(value: Int): this.type = {
+    this.numBlocks = value
+    this
+  }
+
   private var userFactorsDF: DataFrame = _
 
   private var itemFactorsDF: DataFrame = _
@@ -110,8 +117,7 @@ class FunkSVD extends UserEmbedding with ItemEmbedding {
     val spark = this.spark
     import spark.implicits._
 
-    this.dataDF = rawDataDF.select(userColumnName, itemColumnName, ratingColumnName)
-      .distinct()
+    this.dataDF = rawDataDF
       .persist(StorageLevel.MEMORY_AND_DISK)
     println(s"${this.getClass.getSimpleName} fit, dataDF.size:${dataDF.count()}")
     println(s"${this.getClass.getSimpleName} fit, dataDF.user.size:${dataDF.select(userColumnName).distinct().count()}")
@@ -141,8 +147,8 @@ class FunkSVD extends UserEmbedding with ItemEmbedding {
       .setImplicitPrefs(implicitPrefs)
       .setAlpha(alpha)
 
-      .setNumUserBlocks(spark.conf.get("spark.default.parallelism").toInt)
-      .setNumItemBlocks(spark.conf.get("spark.default.parallelism").toInt)
+      .setNumUserBlocks(numBlocks)
+      .setNumItemBlocks(numBlocks)
 
       .setSeed(555L)
       .setNonnegative(true)

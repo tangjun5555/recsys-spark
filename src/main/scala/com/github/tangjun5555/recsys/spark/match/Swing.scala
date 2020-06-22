@@ -81,8 +81,7 @@ class Swing extends I2IMatch with U2IMatch {
     val spark = this.spark
     import spark.implicits._
 
-    this.dataDF = rawDataDF.select(userColumnName, itemColumnName)
-      .distinct()
+    this.dataDF = rawDataDF
       .persist(StorageLevel.MEMORY_AND_DISK)
     println(s"${this.getClass.getSimpleName} fit, dataDF.size:${dataDF.count()}")
     println(s"${this.getClass.getSimpleName} fit, dataDF.user.size:${dataDF.select(userColumnName).distinct().count()}")
