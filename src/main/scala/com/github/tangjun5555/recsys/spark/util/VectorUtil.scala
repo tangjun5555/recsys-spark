@@ -4,12 +4,30 @@ import breeze.linalg.{DenseVector => BDV, SparseVector => BSV, Vector => BV}
 import org.apache.spark.mllib.linalg.{DenseVector, SparseVector, Vector}
 import org.apache.spark.ml.linalg.{DenseVector => MLDenseVector, SparseVector => MLSparseVector, Vector => MLVector, Vectors => MLVectors}
 
+import scala.collection.mutable.ArrayBuffer
+
 /**
  * author: tangj
  * time: 2020/4/26 17:29
  * description:
  */
 object VectorUtil {
+
+  def add(v1: MLVector, v2: MLVector): MLVector = {
+    assert(v1.size == v2.size)
+
+    val buffer = ArrayBuffer[Double]()
+    for (i <- 0.until(v1.size))  {
+      buffer.append(v1(i) + v2(i))
+    }
+    val result = MLVectors.dense(buffer.toArray)
+
+    if (v1.isInstanceOf[MLSparseVector] && v2.isInstanceOf[MLSparseVector]) {
+      result.toSparse
+    } else {
+      result
+    }
+  }
 
   /**
    * Compute the dot product between two vectors

@@ -1,5 +1,6 @@
 package org.apache.spark.ml.fm
 
+import org.apache.commons.lang3.StringUtils
 import org.apache.spark.ml.feature.LabeledPoint
 import org.apache.spark.ml.linalg.Vector
 import org.apache.spark.mllib.linalg
@@ -53,7 +54,7 @@ class CustomFactorizationMachine extends Serializable {
     this.predictionColumnName
   }
 
-  private var sampleWeightColumnName: String = "sample_weight"
+  private var sampleWeightColumnName: String = ""
 
   def setSampleWeightColumnName(value: String): this.type = {
     this.sampleWeightColumnName = value
@@ -65,6 +66,14 @@ class CustomFactorizationMachine extends Serializable {
   }
 
   private var fmModel: Option[FMCustomModel] = None
+
+  def getFMCustomModel(): FMCustomModel = {
+    if (this.fmModel.isDefined) {
+      this.fmModel.get
+    } else {
+      throw new Exception(s"${this.getClass.getSimpleName} this is not fit before.")
+    }
+  }
 
   /**
    * 优化方法
@@ -131,14 +140,6 @@ class CustomFactorizationMachine extends Serializable {
     }
   }
 
-  //  /**
-  //   *
-  //   * 每一个epoch的最大迭代轮数
-  //   * default 100
-  //   * epoch * 1.0 / miniBatchFraction
-  //   */
-  //  private var maxIter: Int = 100
-
   /**
    *
    * Fraction of data to be used per iteration.
@@ -155,18 +156,6 @@ class CustomFactorizationMachine extends Serializable {
     this.miniBatchFraction
   }
 
-  //  /**
-  //   *
-  //   * Default is 0.001
-  //   * 0.0
-  //   */
-  //  private var convergenceTol: Double = 0.0
-  //
-  //  def setConvergenceTol(value: Double): this.type = {
-  //    this.convergenceTol = value
-  //    this
-  //  }
-
   /**
    *
    * 二阶项初始化的
@@ -182,12 +171,6 @@ class CustomFactorizationMachine extends Serializable {
   def getInitStdev(): Double = {
     this.initStdev
   }
-
-  //  /**
-  //   *
-  //   * Number of partitions to be used for optimization.
-  //   */
-  //  private var numPartitions: Int = 10
 
   /**
    *
@@ -233,17 +216,6 @@ class CustomFactorizationMachine extends Serializable {
     this.regularizationParam
   }
 
-  private var useSampleWeight: Boolean = false
-
-  def setUseSampleWeight(value: Boolean): this.type = {
-    this.useSampleWeight = value
-    this
-  }
-
-  def getUseSampleWeight(): Boolean = {
-    this.useSampleWeight
-  }
-
   /**
    * 初始化模型, 用于增量学习
    */
@@ -268,7 +240,7 @@ class CustomFactorizationMachine extends Serializable {
   }
 
   private def extractLabeledPoints(dataset: Dataset[_]): RDD[LabeledPoint] = {
-    if (this.useSampleWeight) {
+    if (!StringUtils.isBlank(sampleWeightColumnName)) {
       dataset.select(labelColumnName, sampleWeightColumnName, featuresColumnName)
         .rdd.map {
         case Row(label: Double, sampleWeight: Double, features: Vector) => {
