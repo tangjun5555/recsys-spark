@@ -1,7 +1,6 @@
 package com.github.tangjun5555.recsys.spark.`match`
 
-import com.github.tangjun5555.recsys.spark.sqludf.ConcatIdByRank
-import org.apache.spark.sql.functions.{col, max, sum}
+import org.apache.spark.sql.functions.{col, sum}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.storage.StorageLevel
 
@@ -23,29 +22,27 @@ class TagPreference extends U2IMatch {
 
   private var spark: SparkSession = _
 
-  private var dataDF: DataFrame = _
-
   private var userColumnName: String = "user"
 
   private var itemColumnName: String = "item"
 
-  private var ratingColumnName: String = "rating"
-
-  private var timestampColumnName = "timestamp"
+  private var ratingColumnName = "rating"
 
   private var tagColumnName: String = "tag"
 
-  /**
-   * 物品标签属性
-   * item, tag
-   */
-  private var itemTagDF: DataFrame = null
+  private var scoreColumnName: String = "score"
 
   /**
-   * 标签倒排索引
-   * tag, item, tagScore
+   * 用户对物品的评分
+   * user item score
    */
-  private var tagInvertedIndexDF: DataFrame = null
+  private var userRatingDF: DataFrame = _
+
+  /**
+   * 物品的标签优势得分
+   * item tag score
+   */
+  private var itemTagScoreDF: DataFrame = _
 
   def setUserColumnName(value: String): this.type = {
     this.userColumnName = value
@@ -67,56 +64,63 @@ class TagPreference extends U2IMatch {
     this
   }
 
-  def setTagInvertedIndexDF(value: DataFrame): this.type = {
-    this.tagInvertedIndexDF = value
+  def setScoreColumnName(value: String): this.type = {
+    this.scoreColumnName = value
     this
   }
 
-  private var userTagScoreDF: DataFrame = null
+  def setItemTagScoreDF(value: DataFrame): this.type = {
+    this.itemTagScoreDF = value.persist(StorageLevel.MEMORY_AND_DISK)
+    this
+  }
+
+  private var userTagScoreDF: DataFrame = _
 
   def fit(rawDataDF: DataFrame): this.type = {
     this.spark = rawDataDF.sparkSession
 
-    this.dataDF = rawDataDF
-      .groupBy(userColumnName, itemColumnName)
-      .agg(max(ratingColumnName).as(ratingColumnName))
+    userRatingDF = rawDataDF
       .persist(StorageLevel.MEMORY_AND_DISK)
 
     // 统计基本信息
-    println(s"[${this.getClass.getSimpleName}.fit] dataDF.size:${dataDF.count()}")
-    println(s"[${this.getClass.getSimpleName}.fit] dataDF.user.size:${dataDF.select(userColumnName).distinct().count()}")
-    println(s"[${this.getClass.getSimpleName}.fit] dataDF.item.size:${dataDF.select(itemColumnName).distinct().count()}")
+    println(s"[${this.getClass.getSimpleName}.fit] userRatingDF.size:${userRatingDF.count()}")
+    println(s"[${this.getClass.getSimpleName}.fit] userRatingDF.user.size:${userRatingDF.select(userColumnName).distinct().count()}")
+    println(s"[${this.getClass.getSimpleName}.fit] userRatingDF.item.size:${userRatingDF.select(itemColumnName).distinct().count()}")
 
-    this.userTagScoreDF = dataDF.join(itemTagDF, Seq(itemColumnName), "inner")
+    this.userTagScoreDF = userRatingDF.join(itemTagScoreDF, Seq(itemColumnName), "inner")
       .groupBy(userColumnName, tagColumnName)
       .agg(sum(ratingColumnName).as("preferenceScore"))
+      .persist(StorageLevel.MEMORY_AND_DISK)
+    println(s"[${this.getClass.getSimpleName}.fit] userTagScoreDF.count:${userTagScoreDF.count()}")
+    userTagScoreDF.show(50, false)
 
     this
   }
 
-  override def recommendForUser(recNum: Int, withScore: Boolean, recResultColumnName: String): DataFrame = {
+  override def recommendForUser(recNum: Int = 50
+                                , withScore: Boolean = false
+                                , recResultColumnName: String = "rec_items"): DataFrame = {
     val spark = this.spark
-    spark.udf.register("concatIdByRank", ConcatIdByRank)
+    import spark.implicits._
 
-    val finalScoreDF = this.userTagScoreDF.join(tagInvertedIndexDF, Seq(tagColumnName), "inner")
+    this.userTagScoreDF.join(itemTagScoreDF, Seq(tagColumnName), "inner")
       .groupBy(userColumnName, itemColumnName)
       .agg(sum(col("preferenceScore") * col("tagScore")).as("final_score"))
-    finalScoreDF.createTempView("finalScoreDF")
-
-    spark.sql(
-      s"""
-         |select ${userColumnName}
-         |  , concatIdByRank(${itemColumnName}, rank) rec_items
-         |from
-         |(
-         |select ${userColumnName}
-         |  , ${itemColumnName}
-         |  , row_number() over(partition by ${userColumnName} order by final_score desc) rank
-         |from finalScoreDF
-         |) a
-         |where rank<=${recNum}
-         |group by ${userColumnName}
-         |""".stripMargin)
+      .rdd
+      .map(row => (row.getAs[String](userColumnName), (row.getAs[String](itemColumnName), row.getAs[Double]("final_score"))))
+      .groupByKey()
+      .map(row => (row._1,
+        row._2.toSeq.sortBy(_._2).reverse.slice(0, recNum)
+          .map(x => {
+            if (withScore) {
+              x._1 + ":" + x._2.formatted("%.3f")
+            } else {
+              x._1
+            }
+          })
+          .mkString(",")
+      ))
+      .toDF(userColumnName, recResultColumnName)
   }
 
 }
