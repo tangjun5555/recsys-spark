@@ -7,7 +7,7 @@ import org.apache.spark.sql.DataFrame
  * time: 2020/5/21 10:29
  * description: 基于LSH实现內积最大检索
  */
-class InnerProductANNSearch {
+class ANNSearch extends Serializable {
 
   private var queryIdColumnName: String = "query_id"
 
