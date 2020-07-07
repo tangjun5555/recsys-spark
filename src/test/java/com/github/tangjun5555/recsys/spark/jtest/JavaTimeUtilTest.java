@@ -11,6 +11,13 @@ import org.junit.Test;
 public class JavaTimeUtilTest {
 
     @Test
+    public void test2() {
+        String start = "2018-04-12 13:58:02";
+        String end = "2018-04-13 13:58:02";
+        System.out.println(JavaTimeUtil.computeDiffSeconds(start, end));
+    }
+
+    @Test
     public void test() {
         String result = JavaTimeUtil.computeDiffDate("20200602", -14);
         System.out.println(result);
