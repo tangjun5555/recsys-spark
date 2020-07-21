@@ -3,7 +3,6 @@ package com.github.tangjun5555.recsys.spark.example
 import com.github.tangjun5555.recsys.spark.jutil.JavaTimeUtil
 import com.github.tangjun5555.recsys.spark.rank.XGBoostBinaryClassifier
 import com.github.tangjun5555.recsys.spark.util.SparkUtil
-import org.apache.log4j.Level
 import org.apache.spark.broadcast.Broadcast
 import org.apache.spark.ml.evaluation.AUCAndLogLossEvaluator
 import org.apache.spark.sql.{DataFrame, SparkSession}
@@ -34,14 +33,12 @@ object KaggleAvazuCTRXGBoostBinaryClassifier {
   def main(args: Array[String]): Unit = {
     println(s"运行参数:${args.mkString(",")}")
     val startTime = JavaTimeUtil.getCurrentDateTime
+    val appName = this.getClass.getName.split("\\.").last.replace("$", "")
 
-    val rawDataFile = args(0)
+    val rawDataTableName = args(0)
     val modelSavePath = args(1)
 
-    val spark = SparkUtil.getSparkSession(
-      name=this.getClass.getName.split("\\.").last.replace("$", ""),
-      cores=5,
-      logLevel=Level.INFO)
+    val spark: SparkSession = SparkUtil.getODPSSparkSession(appName)
     import spark.implicits._
 
     spark.udf.register("getEventDate", getEventDate _)
@@ -49,11 +46,13 @@ object KaggleAvazuCTRXGBoostBinaryClassifier {
     spark.udf.register("transformCategory", transformCategory _)
 
     // 读取原始数据
-    val schema: StructType = StructType(columnNames.map(x => StructField(x, StringType)))
-    val rawDataDF: DataFrame = spark.read.schema(schema)
-      .option("header", true.toString)
-      .csv(rawDataFile)
-      .drop("id")
+    //    val schema: StructType = StructType(columnNames.map(x => StructField(x, StringType)))
+    //    val rawDataDF: DataFrame = spark.read.schema(schema)
+    //      .option("header", true.toString)
+    //      .csv(rawDataFile)
+    //      .drop("id")
+    //      .persist(StorageLevel.MEMORY_AND_DISK)
+    val rawDataDF = spark.table(rawDataTableName)
       .persist(StorageLevel.MEMORY_AND_DISK)
     rawDataDF.createTempView("rawDataDF")
     rawDataDF.show(50, false)
@@ -64,7 +63,8 @@ object KaggleAvazuCTRXGBoostBinaryClassifier {
          |from rawDataDF
          |group by click
          |""".stripMargin
-    ).show(50, false)
+    )
+      .show(50, false)
 
     val event_hour_enums: Seq[String] = 0.until(10).map(x => s"0${x}").++(10.until(24).map(_.toString))
     val featureEnums: Array[(String, Seq[String])] = Array(("event_hour", event_hour_enums))
@@ -80,7 +80,7 @@ object KaggleAvazuCTRXGBoostBinaryClassifier {
          |select getEventDate(hour) event_date
          |  , getEventHour(hour) event_hour
          |  , *
-         |  , transformCategory(getEventHour(hour), '${featureEnums.toMap.apply("event_hour")}') event_hour_new
+         |  , transformCategory(getEventHour(hour), '${featureEnums.toMap.apply("event_hour").mkString(",")}') event_hour_new
          |  , transformCategory(c1, '${featureEnums.toMap.apply("c1").mkString(",")}') c1_new
          |  , transformCategory(banner_pos, '${featureEnums.toMap.apply("banner_pos").mkString(",")}') banner_pos_new
          |  , transformCategory(site_id, '${featureEnums.toMap.apply("site_id").mkString(",")}') site_id_new
@@ -128,29 +128,29 @@ object KaggleAvazuCTRXGBoostBinaryClassifier {
     modelDataDF.show(30, false)
     transformDataDF.unpersist()
 
-    val trainDF = modelDataDF.filter(s"event_date < 14103022").select("label", "features").persist(StorageLevel.MEMORY_AND_DISK)
-//    val validDF = modelDataDF.filter(s"event_date >= 14103022").select("label", "features").persist(StorageLevel.MEMORY_AND_DISK)
+    val trainDF = modelDataDF.filter(s"event_date < 14103000").select("label", "features").persist(StorageLevel.MEMORY_AND_DISK)
+    val validDF = modelDataDF.filter(s"event_date >= 14103000").select("label", "features").persist(StorageLevel.MEMORY_AND_DISK)
 
     val model = new XGBoostBinaryClassifier()
       .setNumWorkers(2)
       .fit(trainDF)
 
     val trainPreDF = model.predict(trainDF).persist(StorageLevel.MEMORY_AND_DISK)
-//    val validPreDF = model.predict(validDF)
+    val validPreDF = model.predict(validDF)
     trainPreDF.show(50, false)
 
     val evaluator = new AUCAndLogLossEvaluator()
     val (trainLogLoss, trainAUC) = evaluator.evaluate(trainPreDF)
-//    val (validLogLoss, validAUC) = evaluator.evaluate(validPreDF)
+    val (validLogLoss, validAUC) = evaluator.evaluate(validPreDF)
 
     println(s"trainLogLoss:${trainLogLoss}, trainAUC:${trainAUC}")
-//    println(s"validLogLoss:${validLogLoss}, validAUC:${validAUC}")
+    println(s"validLogLoss:${validLogLoss}, validAUC:${validAUC}")
 
     model.save(modelSavePath)
 
     val endTime = JavaTimeUtil.getCurrentDateTime
     println(s"startTime:${startTime}, endTime:${endTime}")
-//    Thread.sleep(1000 * 1000)
+
     spark.stop()
   }
 
