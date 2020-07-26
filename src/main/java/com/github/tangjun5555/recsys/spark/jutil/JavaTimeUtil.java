@@ -1,7 +1,9 @@
 package com.github.tangjun5555.recsys.spark.jutil;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 
@@ -44,6 +46,17 @@ public class JavaTimeUtil {
      */
     public static String computeDiffDate(String start, int period) {
         return LocalDate.parse(start, formatter3).plusDays(period).format(formatter3);
+    }
+
+    /**
+     * 将毫秒级别的timestamp转为LocalDateTime
+     * @param timestamp
+     * @return
+     */
+    public static String getDateTimeOfTimestamp(long timestamp) {
+        Instant instant = Instant.ofEpochMilli(timestamp);
+        ZoneId zone = ZoneId.systemDefault();
+        return LocalDateTime.ofInstant(instant, zone).format(formatter2);
     }
 
 }

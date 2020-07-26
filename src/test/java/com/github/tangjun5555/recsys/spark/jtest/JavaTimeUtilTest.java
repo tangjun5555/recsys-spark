@@ -11,6 +11,12 @@ import org.junit.Test;
 public class JavaTimeUtilTest {
 
     @Test
+    public void test3() {
+        long t = 1595378651966L;
+        System.out.println("结果:" + JavaTimeUtil.getDateTimeOfTimestamp(t));
+    }
+
+    @Test
     public void test2() {
         String start = "2018-04-12 13:58:02";
         String end = "2018-04-13 13:58:02";
