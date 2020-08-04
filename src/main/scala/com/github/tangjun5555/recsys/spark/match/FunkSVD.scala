@@ -42,7 +42,7 @@ class FunkSVD extends UserEmbedding with ItemEmbedding {
   /**
    * 正则化参数
    */
-  private var regularization: Double = 0.01
+  private var regularization: Double = 0.0001
 
   /**
    * 是否是隐式反馈
