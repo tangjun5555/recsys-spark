@@ -279,4 +279,8 @@ class DeepWalk extends ItemEmbedding {
     }
   }
 
+  def getItemPair(rawDataDF: DataFrame): DataFrame = {
+    rawDataDF
+  }
+
 }
