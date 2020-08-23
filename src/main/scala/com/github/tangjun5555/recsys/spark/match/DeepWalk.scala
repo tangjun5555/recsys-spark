@@ -186,7 +186,7 @@ class DeepWalk extends ItemEmbedding {
         edgeTriplet.attr.dstNeighbors = edgeTriplet.dstAttr.neighbors
         edgeTriplet.attr
       }
-      .persist(StorageLevel.MEMORY_AND_DISK)
+      .cache()
 
     val edge2Attr: RDD[(String, EdgeAttr)] = graph.triplets
       .map { edgeTriplet =>
