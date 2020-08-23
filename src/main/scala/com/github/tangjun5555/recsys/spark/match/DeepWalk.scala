@@ -57,19 +57,11 @@ class DeepWalk extends ItemEmbedding {
     this
   }
 
-  def getUserColumnName(): String = {
-    this.userColumnName
-  }
-
   private var itemColumnName: String = "item"
 
   def setItemColumnName(value: String): this.type = {
     this.itemColumnName = value
     this
-  }
-
-  def getItemColumnName(): String = {
-    this.itemColumnName
   }
 
   private var ratingColumnName = "rating"
@@ -79,19 +71,11 @@ class DeepWalk extends ItemEmbedding {
     this
   }
 
-  def getRatingColumnName(): String = {
-    this.ratingColumnName
-  }
-
   private var timestampColumnName: String = "timestamp"
 
   def setTimestampColumnName(value: String): this.type = {
     this.timestampColumnName = value
     this
-  }
-
-  def getTimestampColumnName(): String = {
-    this.timestampColumnName
   }
 
   private var vectorColumnName = "vector"
@@ -101,10 +85,6 @@ class DeepWalk extends ItemEmbedding {
     this
   }
 
-  def getVectorColumnName(): String = {
-    this.vectorColumnName
-  }
-
   private var walkEpoch: Int = 10
 
   def setWalkEpoch(value: Int): this.type = {
@@ -112,20 +92,28 @@ class DeepWalk extends ItemEmbedding {
     this
   }
 
-  def getWalkEpoch(): Int = {
-    this.walkEpoch
-  }
-
   private var walkLength: Int = 30
 
   def setWalkLength(value: Int): this.type = {
+    assert(value > 2)
     this.walkLength = value
     this
   }
 
-  def getWalkLength(): Int = {
-    this.walkLength
+  private var windowSize: Int = 3
+
+  def setWindowSize(value: Int): this.type = {
+    assert(windowSize > 0)
+    this.windowSize = value
+    this
   }
+
+  /**
+   * 物品的唯一映射
+   */
+  private var itemId2IndexRDD: RDD[(String, Long)] = _
+
+  private var realRandomWalkPaths: RDD[(Long, ArrayBuffer[Long])] = _
 
   private var word2Vec: CustomWord2VecModel = _
 
@@ -134,26 +122,25 @@ class DeepWalk extends ItemEmbedding {
   def fit(rawDataDF: DataFrame): this.type = {
     val spark = rawDataDF.sparkSession
     this.spark = spark
-    import spark.implicits._
 
-    val dataDF = rawDataDF.select(userColumnName, itemColumnName, ratingColumnName, timestampColumnName)
+    this.dataDF = rawDataDF.select(userColumnName, itemColumnName, ratingColumnName, timestampColumnName)
       .filter(s"${ratingColumnName}>0.0")
       .distinct()
       .persist(StorageLevel.MEMORY_AND_DISK)
     dataDF.show(30, false)
-    this.dataDF = dataDF
 
     // 统计基本信息
     println(s"[${this.getClass.getSimpleName}.fit] dataDF.size:${dataDF.count()}")
     println(s"[${this.getClass.getSimpleName}.fit] dataDF.user.size:${dataDF.select(userColumnName).distinct().count()}")
     println(s"[${this.getClass.getSimpleName}.fit] dataDF.item.size:${dataDF.select(itemColumnName).distinct().count()}")
 
-    val itemId2IndexRDD: RDD[(String, Long)] = dataDF.rdd.map(x => x.getAs[String](itemColumnName))
+    this.itemId2IndexRDD = dataDF.rdd.map(x => x.getAs[String](itemColumnName))
       .distinct()
       .zipWithIndex()
       .persist(StorageLevel.MEMORY_AND_DISK)
     println(itemId2IndexRDD.first())
 
+    // 物品之间的转移权重
     val inputTriplets: RDD[(VertexId, VertexId, Double)] = dataDF.rdd
       .map(x => (x.getAs[String](userColumnName), (x.getAs[String](timestampColumnName), x.getAs[String](itemColumnName), x.getAs[Double](ratingColumnName))))
       .groupByKey()
@@ -176,20 +163,22 @@ class DeepWalk extends ItemEmbedding {
       .join(itemId2IndexRDD)
       .map(x => (x._2._1._1, x._2._2, x._2._1._2))
 
+    // 生成图的顶点
     val graphNodes: RDD[(Long, NodeAttr)] = inputTriplets
       .map(x => (x._1, Array((x._2, x._3))))
       .reduceByKey(_ ++ _)
       .map(x => (x._1, NodeAttr(neighbors = x._2)))
-      .cache()
+      .persist(StorageLevel.MEMORY_AND_DISK)
     println(graphNodes.first())
 
+    // 生成图的边
     val graphEdges: RDD[Edge[EdgeAttr]] = graphNodes
       .flatMap { case (srcId, nodeAttr) =>
         nodeAttr.neighbors.map { case (dstId, _) =>
           Edge(srcId, dstId, EdgeAttr())
         }
       }
-      .cache()
+      .persist(StorageLevel.MEMORY_AND_DISK)
     println(graphEdges.first())
 
     val graph: Graph[NodeAttr, EdgeAttr] = Graph(graphNodes, graphEdges, defaultVertexAttr = NodeAttr())
@@ -197,61 +186,105 @@ class DeepWalk extends ItemEmbedding {
         edgeTriplet.attr.dstNeighbors = edgeTriplet.dstAttr.neighbors
         edgeTriplet.attr
       }
-      .cache()
-
-    val edge2Attr: RDD[(String, EdgeAttr)] = graph.triplets.map { edgeTriplet =>
-      (s"${edgeTriplet.srcId}${edgeTriplet.dstId}", edgeTriplet.attr)
-    }
       .persist(StorageLevel.MEMORY_AND_DISK)
 
-    val realRandomWalkPaths: RDD[(Long, ArrayBuffer[Long])] = 0.until(walkEpoch).map(i => {
-
-      var preRandomWalk: RDD[(VertexId, ArrayBuffer[VertexId])] = null
-      var randomWalk: RDD[(VertexId, ArrayBuffer[VertexId])] = graph.vertices
-        .map { case (vertexId: Long, nodeAttr: NodeAttr) =>
-          val pathBuffer = new ArrayBuffer[Long]()
-          pathBuffer.append(vertexId)
-          if (!nodeAttr.neighbors.isEmpty) {
-            pathBuffer.append(randomChoice(nodeAttr.neighbors))
-          }
-          (vertexId, pathBuffer)
-        }
-        .filter(_._2.size >= 2)
-        .cache()
-
-      for (j <- 0.until(this.walkLength - 2)) {
-        preRandomWalk = randomWalk
-        randomWalk = randomWalk
-          .map { case (srcNodeId, pathBuffer) =>
-            val prevNodeId = pathBuffer(pathBuffer.length - 2)
-            val currentNodeId = pathBuffer(pathBuffer.length - 1)
-            (s"$prevNodeId$currentNodeId", (srcNodeId, pathBuffer))
-          }
-          .join(edge2Attr)
-          .map { case (_, ((srcNodeId, pathBuffer), edgeAttr)) =>
-            val dstNeighbors: Array[(VertexId, Double)] = edgeAttr.dstNeighbors
-            if (!dstNeighbors.isEmpty) {
-              val nextNodeId = randomChoice(edgeAttr.dstNeighbors)
-              pathBuffer.append(nextNodeId)
-            }
-            (srcNodeId, pathBuffer)
-          }
-
-        println(s"[${this.getClass.getSimpleName}.fit] finish walk, epoch:${i}, iter:${j}")
-        preRandomWalk.unpersist(false)
+    val edge2Attr: RDD[(String, EdgeAttr)] = graph.triplets
+      .map { edgeTriplet =>
+        (s"${edgeTriplet.srcId}${edgeTriplet.dstId}", edgeTriplet.attr)
       }
-      randomWalk
-    })
+      .persist(StorageLevel.MEMORY_AND_DISK)
+
+    this.realRandomWalkPaths = 0.until(walkEpoch)
+      .map(i => {
+        var randomWalk: RDD[(VertexId, ArrayBuffer[VertexId])] = graph.vertices
+          .map { case (vertexId: Long, nodeAttr: NodeAttr) =>
+            val pathBuffer = new ArrayBuffer[Long]()
+            pathBuffer.append(vertexId)
+            if (!nodeAttr.neighbors.isEmpty) {
+              pathBuffer.append(randomChoice(nodeAttr.neighbors))
+            }
+            (vertexId, pathBuffer)
+          }
+          .filter(_._2.size >= 2)
+        for (j <- 0.until(this.walkLength - 2)) {
+          randomWalk = randomWalk
+            .map { case (srcNodeId, pathBuffer) =>
+              val prevNodeId = pathBuffer(pathBuffer.length - 2)
+              val currentNodeId = pathBuffer(pathBuffer.length - 1)
+              (s"$prevNodeId$currentNodeId", (srcNodeId, pathBuffer))
+            }
+            .join(edge2Attr)
+            .map { case (_, ((srcNodeId, pathBuffer), edgeAttr)) =>
+              val dstNeighbors: Array[(VertexId, Double)] = edgeAttr.dstNeighbors
+              if (!dstNeighbors.isEmpty) {
+                val nextNodeId = randomChoice(edgeAttr.dstNeighbors)
+                pathBuffer.append(nextNodeId)
+              }
+              (srcNodeId, pathBuffer)
+            }
+          println(s"[${this.getClass.getSimpleName}.fit] finish walk, epoch:${i}, iter:${j}")
+        }
+        randomWalk
+      })
       .reduce(_.union(_))
       .persist(StorageLevel.MEMORY_AND_DISK)
     println(realRandomWalkPaths.count())
+
+    this
+  }
+
+  /**
+   * 获取Pair对
+   *
+   * @return
+   */
+  def generatePair(): DataFrame = {
+    val spark = this.spark
+    import spark.implicits._
+
+    val index2ItemIdRDD: RDD[(Long, String)] = itemId2IndexRDD.map(x => (x._2, x._1))
+      .persist(StorageLevel.MEMORY_AND_DISK)
+    this.realRandomWalkPaths
+      .map(_._2.toSeq)
+      .flatMap(seq => {
+        val buffer = new ArrayBuffer[(Long, Long)]()
+        seq.indices.foreach(i => {
+          val i1 = seq(i)
+          1.to(windowSize)
+            .foreach(j => {
+              if ((i - j) >= 0) {
+                val i2 = seq(i - j)
+                if (!i1.equals(i2)) {
+                  buffer.append((i1, i2))
+                }
+              }
+              if ((i + j) <= (seq.size - 1)) {
+                val i2 = seq(i + j)
+                if (!i1.equals(i2)) {
+                  buffer.append((i1, i2))
+                }
+              }
+            })
+        })
+        buffer
+      })
+      .join(index2ItemIdRDD)
+      .map(x => x._2)
+      .join(index2ItemIdRDD)
+      .map(x => x._2)
+      .toDF("target_item", "context_item")
+  }
+
+  override def getItemEmbedding(vectorAsString: Boolean): DataFrame = {
+    val spark = this.spark
+    import spark.implicits._
 
     this.word2Vec = new CustomWord2Vec()
       .setNumIterations(20)
       .setVectorSize(32)
       .setLearningRate(0.025)
       .setMaxSentenceLength(this.walkLength)
-      .setWindowSize(2)
+      .setWindowSize(windowSize)
       .setMinCount(0)
       .setNumPartitions(spark.conf.get("spark.default.parallelism").toInt / 20)
       .setSeed(555L)
@@ -263,16 +296,6 @@ class DeepWalk extends ItemEmbedding {
       .map(x => (x._2._2, x._2._1))
       .toDF("word", "vector")
 
-    this
-  }
-
-  def generatePair(): DataFrame = {
-
-  }
-
-  override def getItemEmbedding(vectorAsString: Boolean): DataFrame = {
-    val spark = this.spark
-    import spark.implicits._
     if (vectorAsString) {
       this.itemVectorDF
         .rdd.map(row => (row.getAs[String]("word"), row.getAs[Seq[Float]]("vector").mkString(",")))
@@ -281,10 +304,6 @@ class DeepWalk extends ItemEmbedding {
       this.itemVectorDF.withColumnRenamed("word", itemColumnName)
         .withColumnRenamed("vector", vectorColumnName)
     }
-  }
-
-  def getItemPair(rawDataDF: DataFrame): DataFrame = {
-    rawDataDF
   }
 
 }
