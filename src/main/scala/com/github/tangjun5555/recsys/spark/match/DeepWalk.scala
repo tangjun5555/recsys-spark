@@ -266,6 +266,10 @@ class DeepWalk extends ItemEmbedding {
     this
   }
 
+  def generatePair(): DataFrame = {
+
+  }
+
   override def getItemEmbedding(vectorAsString: Boolean): DataFrame = {
     val spark = this.spark
     import spark.implicits._
