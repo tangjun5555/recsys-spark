@@ -3,7 +3,7 @@ package com.github.tangjun5555.recsys.spark.rank
 import ml.dmlc.xgboost4j.scala.spark.{XGBoostClassificationModel, XGBoostClassifier}
 import org.apache.spark.ml.linalg.Vector
 import org.apache.spark.sql.DataFrame
-import org.apache.spark.sql.functions.{col, udf}
+import org.apache.spark.sql.functions.udf
 
 /**
  * author: tangj 1844250138@qq.com
@@ -33,7 +33,7 @@ class XGBoostBinaryClassifier extends Serializable {
     this
   }
 
-  private var weightColumnName: String = "sample_weight"
+  private var weightColumnName: String = ""
 
   def setWeightColumnName(value: String): this.type = {
     this.weightColumnName = value
@@ -65,17 +65,18 @@ class XGBoostBinaryClassifier extends Serializable {
 
   /**
    * 训练
+   *
    * @param rawDataDF
    * @return
    */
   def fit(rawDataDF: DataFrame): this.type = {
-    this.xgboostModel = new XGBoostClassifier()
+    var model = new XGBoostClassifier()
       .setFeaturesCol(featuresColumnName)
       .setLabelCol(labelColumnName)
       .setPredictionCol(predictionColumnName)
-      .setWeightCol(weightColumnName)
 
       .setObjective("binary:logistic")
+      .setEvalMetric("auc")
 
       .setNumWorkers(numWorkers)
       .setNumRound(numRound)
@@ -83,7 +84,12 @@ class XGBoostBinaryClassifier extends Serializable {
 
       .setSeed(555L)
       .setSilent(0)
-      .fit(rawDataDF)
+
+    if (!"".equals(weightColumnName)) {
+      model = model.setWeightCol(weightColumnName)
+    }
+
+    this.xgboostModel = model.fit(rawDataDF)
 
     this
   }
@@ -100,8 +106,8 @@ class XGBoostBinaryClassifier extends Serializable {
         (features: Vector) => features.toArray(1)
       )
       this.xgboostModel.transform(rawDataDF)
-//        .drop("prediction")
-//        .withColumn(predictionColumnName, predictCol(col("probability")))
+      //        .drop("prediction")
+      //        .withColumn(predictionColumnName, predictCol(col("probability")))
     } else {
       throw new Exception(s"${this.getClass.getSimpleName} this is not fit before.")
     }
@@ -109,6 +115,7 @@ class XGBoostBinaryClassifier extends Serializable {
 
   /**
    * 加载之前训练好的模型
+   *
    * @param modelFilePath
    * @return
    */
@@ -120,6 +127,7 @@ class XGBoostBinaryClassifier extends Serializable {
   /**
    * 保存模型
    * 只能保存为二进制格式
+   *
    * @param modelFilePath
    * @return
    */
