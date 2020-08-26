@@ -61,6 +61,13 @@ class XGBoostBinaryClassifier extends Serializable {
     this
   }
 
+  private var eta: Double = 0.3
+
+  def setEta(value: Double): this.type = {
+    this.eta = value
+    this
+  }
+
   private var xgboostModel: XGBoostClassificationModel = _
 
   /**
@@ -81,7 +88,9 @@ class XGBoostBinaryClassifier extends Serializable {
       .setNumWorkers(numWorkers)
       .setNumRound(numRound)
       .setMaxDepth(maxDepth)
+      .setEta(0.3)
 
+      .setMissing(0.0f)
       .setSeed(555L)
       .setSilent(0)
 
