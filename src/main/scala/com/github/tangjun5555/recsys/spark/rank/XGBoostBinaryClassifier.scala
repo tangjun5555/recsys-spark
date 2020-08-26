@@ -33,16 +33,35 @@ class XGBoostBinaryClassifier extends Serializable {
     this
   }
 
-  private var params: Map[String, Any] = Map(
-    "objective" -> "binary:logistic"  // 目标函数
-  )
+  private var weightColumnName: String = "sample_weight"
 
-  def setNumWorkers(value: Int): this.type = {
-    this.params = this.params.+(("num_workers", value))
+  def setWeightColumnName(value: String): this.type = {
+    this.weightColumnName = value
     this
   }
 
-  private var xgboostModel: XGBoostClassificationModel = null
+  private var numWorkers: Int = 10
+
+  def setNumWorkers(value: Int): this.type = {
+    this.numWorkers = value
+    this
+  }
+
+  private var numRound: Int = 200
+
+  def setNumRound(value: Int): this.type = {
+    this.numRound = value
+    this
+  }
+
+  private var maxDepth: Int = 6
+
+  def setMaxDepth(value: Int): this.type = {
+    this.maxDepth = value
+    this
+  }
+
+  private var xgboostModel: XGBoostClassificationModel = _
 
   /**
    * 训练
@@ -50,9 +69,20 @@ class XGBoostBinaryClassifier extends Serializable {
    * @return
    */
   def fit(rawDataDF: DataFrame): this.type = {
-    this.xgboostModel = new XGBoostClassifier(params)
+    this.xgboostModel = new XGBoostClassifier()
       .setFeaturesCol(featuresColumnName)
       .setLabelCol(labelColumnName)
+      .setPredictionCol(predictionColumnName)
+      .setWeightCol(weightColumnName)
+
+      .setObjective("binary:logistic")
+
+      .setNumWorkers(numWorkers)
+      .setNumRound(numRound)
+      .setMaxDepth(maxDepth)
+
+      .setSeed(555L)
+      .setSilent(0)
       .fit(rawDataDF)
 
     this
@@ -70,8 +100,8 @@ class XGBoostBinaryClassifier extends Serializable {
         (features: Vector) => features.toArray(1)
       )
       this.xgboostModel.transform(rawDataDF)
-        .drop("prediction")
-        .withColumn(predictionColumnName, predictCol(col("probability")))
+//        .drop("prediction")
+//        .withColumn(predictionColumnName, predictCol(col("probability")))
     } else {
       throw new Exception(s"${this.getClass.getSimpleName} this is not fit before.")
     }
