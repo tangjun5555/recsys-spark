@@ -88,7 +88,7 @@ class XGBoostBinaryClassifier extends Serializable {
       .setNumWorkers(numWorkers)
       .setNumRound(numRound)
       .setMaxDepth(maxDepth)
-      .setEta(0.3)
+      .setEta(eta)
 
       .setMissing(0.0f)
       .setSeed(555L)
