@@ -3,7 +3,7 @@ package com.github.tangjun5555.recsys.spark.rank
 import ml.dmlc.xgboost4j.scala.spark.{XGBoostClassificationModel, XGBoostClassifier}
 import org.apache.spark.ml.linalg.Vector
 import org.apache.spark.sql.DataFrame
-import org.apache.spark.sql.functions.udf
+import org.apache.spark.sql.functions.{col, udf}
 
 /**
  * author: tangj 1844250138@qq.com
@@ -115,8 +115,8 @@ class XGBoostBinaryClassifier extends Serializable {
         (features: Vector) => features.toArray(1)
       )
       this.xgboostModel.transform(rawDataDF)
-      //        .drop("prediction")
-      //        .withColumn(predictionColumnName, predictCol(col("probability")))
+        .drop("prediction")
+        .withColumn(predictionColumnName, predictCol(col("probability")))
     } else {
       throw new Exception(s"${this.getClass.getSimpleName} this is not fit before.")
     }
