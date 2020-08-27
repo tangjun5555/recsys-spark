@@ -59,7 +59,7 @@ class GAUCEvaluator extends Serializable {
          |select ${groupColumnName}
          |  , count(${labelColumnName}) ${groupColumnName}_weight
          |from GAUCEvaluator_data
-         |group ${groupColumnName}
+         |group by ${groupColumnName}
          |having count(distinct ${labelColumnName})=2
          |"""
         .stripMargin
