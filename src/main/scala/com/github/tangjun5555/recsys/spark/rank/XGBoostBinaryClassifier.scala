@@ -94,7 +94,7 @@ class XGBoostBinaryClassifier extends Serializable {
       .setPredictionCol(predictionColumnName)
 
       .setObjective("binary:logistic")
-      .setEvalMetric("auc")
+      .setEvalMetric("logloss")
       .setTrainTestRatio(trainTestRatio)
 
       .setNumWorkers(numWorkers)
