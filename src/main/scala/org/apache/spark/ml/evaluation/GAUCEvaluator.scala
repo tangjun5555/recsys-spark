@@ -51,7 +51,7 @@ class GAUCEvaluator extends Serializable {
         .select(groupColumnName, predictionColumnName, labelColumnName)
         .distinct()
         .persist(StorageLevel.MEMORY_AND_DISK)
-    dataDF.createTempView("GAUCEvaluator_data")
+    dataDF.createOrReplaceTempView(s"GAUCEvaluator_data")
 
     val spark: SparkSession = dataDF.sparkSession
     val groupWeightDF: DataFrame = spark.sql(
@@ -60,7 +60,7 @@ class GAUCEvaluator extends Serializable {
          |  , count(${labelColumnName}) ${groupColumnName}_weight
          |from GAUCEvaluator_data
          |group by ${groupColumnName}
-         |having count(distinct ${labelColumnName})=2
+         |having count(distinct ${labelColumnName})>=2
          |"""
         .stripMargin
     )
