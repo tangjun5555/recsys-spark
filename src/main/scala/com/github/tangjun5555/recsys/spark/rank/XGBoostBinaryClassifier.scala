@@ -141,7 +141,7 @@ class XGBoostBinaryClassifier extends Serializable {
    * @return
    */
   def save(modelFilePath: String): this.type = {
-    this.xgboostModel.save(modelFilePath)
+    this.xgboostModel.write.overwrite().save(modelFilePath)
     this
   }
 
