@@ -75,6 +75,13 @@ class XGBoostBinaryClassifier extends Serializable {
     this
   }
 
+  private var evalMetric: String = "logloss"
+
+  def setEvalMetric(value: String): this.type = {
+    this.evalMetric = value
+    this
+  }
+
   private var spark: SparkSession = _
 
   private var xgboostModel: XGBoostClassificationModel = _
@@ -94,7 +101,7 @@ class XGBoostBinaryClassifier extends Serializable {
       .setPredictionCol(predictionColumnName)
 
       .setObjective("binary:logistic")
-      .setEvalMetric("logloss")
+      .setEvalMetric(evalMetric)
       .setTrainTestRatio(trainTestRatio)
 
       .setNumWorkers(numWorkers)
