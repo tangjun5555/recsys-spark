@@ -2,8 +2,8 @@ package com.github.tangjun5555.recsys.spark.rank
 
 import ml.dmlc.xgboost4j.scala.spark.{XGBoostClassificationModel, XGBoostClassifier}
 import org.apache.spark.ml.linalg.Vector
-import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions.{col, udf}
+import org.apache.spark.sql.{DataFrame, SparkSession}
 
 /**
  * author: tangj 1844250138@qq.com
@@ -68,6 +68,15 @@ class XGBoostBinaryClassifier extends Serializable {
     this
   }
 
+  private var trainTestRatio: Double = 0.1
+
+  def setTrainTestRatio(value: Double): this.type = {
+    this.trainTestRatio = value
+    this
+  }
+
+  private var spark: SparkSession = _
+
   private var xgboostModel: XGBoostClassificationModel = _
 
   /**
@@ -77,13 +86,16 @@ class XGBoostBinaryClassifier extends Serializable {
    * @return
    */
   def fit(rawDataDF: DataFrame): this.type = {
+    this.spark = rawDataDF.sparkSession
+
     var model = new XGBoostClassifier()
       .setFeaturesCol(featuresColumnName)
       .setLabelCol(labelColumnName)
       .setPredictionCol(predictionColumnName)
 
       .setObjective("binary:logistic")
-      .setEvalMetric("auc")
+      .setEvalMetric("logloss")
+      .setTrainTestRatio(trainTestRatio)
 
       .setNumWorkers(numWorkers)
       .setNumRound(numRound)
@@ -120,6 +132,19 @@ class XGBoostBinaryClassifier extends Serializable {
     } else {
       throw new Exception(s"${this.getClass.getSimpleName} this is not fit before.")
     }
+  }
+
+  def getFeatureScore(): DataFrame = {
+    val spark = this.spark
+    import spark.implicits._
+
+    val scores: Seq[(String, Integer)] = this.xgboostModel.nativeBooster.getFeatureScore().toSeq
+    spark.sparkContext.makeRDD(scores).toDF("feature_name", "score")
+  }
+
+  def printSummary(): Unit = {
+    println(this.xgboostModel.summary.toString())
+    println(this.xgboostModel.explainParams())
   }
 
   /**
