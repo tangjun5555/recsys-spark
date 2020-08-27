@@ -69,7 +69,7 @@ class GAUCEvaluator extends Serializable {
       .rdd
       .map(row => {
         val groupId = row.getAs[String](groupColumnName)
-        val groupWeight = row.getAs[Int](groupColumnName + "_weight")
+        val groupWeight = row.getAs[Long](groupColumnName + "_weight")
         val prediction = row.getAs[Double](predictionColumnName)
         val label = row.getAs[Double](labelColumnName)
 
