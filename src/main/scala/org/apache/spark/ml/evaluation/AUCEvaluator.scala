@@ -48,7 +48,7 @@ class AUCEvaluator extends Serializable {
         }
       )
       .collect()
-      .sortBy(_._1)
+      .sortBy(x => (x._1, 1.0 - x._2))
 
     if (scoreAndLabel.map(_._2).distinct.length == 1) {
       0.5

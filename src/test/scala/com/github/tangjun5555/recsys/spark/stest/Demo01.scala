@@ -32,8 +32,16 @@ object Demo01 {
   }
 
   def main(args: Array[String]): Unit = {
-    println(System.getenv("HADOOP_HOME"))
-    println(System.getProperties.getProperty("os.name"))
+
+    val values = Seq(
+      (1.0, 2.0, "a")
+      , (2.0, 3.0, "b")
+      , (1.0, 1.0, "c")
+    )
+    println(values.sortBy(x => (x._1, 1.0 - x._2)))
+
+//    println(System.getenv("HADOOP_HOME"))
+//    println(System.getProperties.getProperty("os.name"))
 
 //    println(1.0 / 0.0)
 //    println(-1.0 / 0.0)
