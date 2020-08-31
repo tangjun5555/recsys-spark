@@ -19,8 +19,11 @@ class GAUCEvaluator extends Serializable {
     this
   }
 
-  def getGroupColumnName(): String = {
-    this.groupColumnName
+  private var labelColumnName: String = "label"
+
+  def setLabelColumnName(value: String): this.type = {
+    this.labelColumnName = value
+    this
   }
 
   private var predictionColumnName: String = "prediction"
@@ -30,34 +33,44 @@ class GAUCEvaluator extends Serializable {
     this
   }
 
-  def getPredictionColumnName(): String = {
-    this.predictionColumnName
-  }
+  private var sampleWeightColumnName: String = ""
 
-  private var labelColumnName: String = "label"
-
-  def setLabelColumnName(value: String): this.type = {
-    this.labelColumnName = value
+  def setSampleWeightColumnName(value: String): this.type = {
+    this.sampleWeightColumnName = value
     this
   }
 
-  def getLabelColumnName(): String = {
-    this.labelColumnName
-  }
-
   def evaluate(predictions: DataFrame): Double = {
-    val dataDF: DataFrame =
-      predictions
-        .select(groupColumnName, predictionColumnName, labelColumnName)
-        .distinct()
-        .persist(StorageLevel.MEMORY_AND_DISK)
+    val spark: SparkSession = predictions.sparkSession
+    import spark.implicits._
+
+    val dataDF: DataFrame = predictions.rdd
+      .map(row =>
+        if ("".equals(sampleWeightColumnName) || sampleWeightColumnName == null) {
+          (
+            row.getAs[String](groupColumnName)
+            , row.getAs[Double](predictionColumnName)
+            , row.getAs[Double](labelColumnName)
+            , 1.0
+          )
+        } else {
+          (
+            row.getAs[String](groupColumnName)
+            , row.getAs[Double](predictionColumnName)
+            , row.getAs[Double](labelColumnName)
+            , row.getAs[Double](sampleWeightColumnName)
+          )
+        }
+      )
+      .toDF(groupColumnName, predictionColumnName, labelColumnName, "sample_weight")
+      .persist(StorageLevel.MEMORY_AND_DISK)
     dataDF.createOrReplaceTempView(s"GAUCEvaluator_data")
 
-    val spark: SparkSession = dataDF.sparkSession
+    // 计算每个group的权重
     val groupWeightDF: DataFrame = spark.sql(
       s"""
          |select ${groupColumnName}
-         |  , count(${labelColumnName}) ${groupColumnName}_weight
+         |  , sum(sample_weight) ${groupColumnName}_weight
          |from GAUCEvaluator_data
          |group by ${groupColumnName}
          |having count(distinct ${labelColumnName})>=2
@@ -72,24 +85,26 @@ class GAUCEvaluator extends Serializable {
         val groupWeight = row.getAs[Long](groupColumnName + "_weight")
         val prediction = row.getAs[Double](predictionColumnName)
         val label = row.getAs[Double](labelColumnName)
+        val sampleWeight = row.getAs[Double]("sample_weight")
 
-        ((groupId, groupWeight), (prediction, label))
+        ((groupId, groupWeight), (prediction, label, sampleWeight))
       })
       .groupByKey()
-      .map(row => {  // 计算每个group的AUC
-        val pairs = row._2.toSeq.sortBy(_._1).reverse
-        var count = 0
+      .map(row => { // 计算每个group的AUC
+        val pairs: Seq[(Double, Double, Double)] = row._2.toSeq.sortBy(_._1).reverse
+        var count = 0.0
         for (i <- 0.until(pairs.size - 1) if pairs(i)._2 == 1.0) {
           for (j <- (i + 1).until(pairs.size) if pairs(j)._2 == 0.0) {
             // 排除正负例预测值一样的情况
             if (pairs(i)._1 > pairs(j)._1) {
-              count += 1
+              count += pairs(i)._3 * pairs(j)._3
             }
           }
         }
-        val positiveNum = pairs.count(x => x._2 == 1.0)
-        val negativeNum = pairs.count(x => x._2 == 0.0)
-        (row._1._2, row._1._2 * count * 1.0 / (positiveNum * negativeNum))
+        val positiveNum = pairs.filter(_._2 == 1.0).map(_._3).sum
+        val negativeNum = pairs.filter(_._2 == 0.0).map(_._3).sum
+        val groupAuc = count / (positiveNum * negativeNum)
+        (row._1._2, row._1._2 * groupAuc)
       })
       .reduce((x, y) => (x._1 + y._1, x._2 + y._2))
 
