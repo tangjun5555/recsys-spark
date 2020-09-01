@@ -82,7 +82,7 @@ class GAUCEvaluator extends Serializable {
       .rdd
       .map(row => {
         val groupId = row.getAs[String](groupColumnName)
-        val groupWeight = row.getAs[Long](groupColumnName + "_weight")
+        val groupWeight = row.getAs[Double](groupColumnName + "_weight")
         val prediction = row.getAs[Double](predictionColumnName)
         val label = row.getAs[Double](labelColumnName)
         val sampleWeight = row.getAs[Double]("sample_weight")
@@ -91,12 +91,14 @@ class GAUCEvaluator extends Serializable {
       })
       .groupByKey()
       .map(row => { // 计算每个group的AUC
-        val pairs: Seq[(Double, Double, Double)] = row._2.toSeq.sortBy(_._1).reverse
+        val pairs: Seq[(Double, Double, Double)] = row._2.toSeq
+          //          .sortBy(_._1)
+          .sortBy(x => (x._1, x._2))
+          .reverse
         var count = 0.0
         for (i <- 0.until(pairs.size - 1) if pairs(i)._2 == 1.0) {
           for (j <- (i + 1).until(pairs.size) if pairs(j)._2 == 0.0) {
-            // 排除正负例预测值一样的情况
-            if (pairs(i)._1 > pairs(j)._1) {
+            if (pairs(i)._1 >= pairs(j)._1) {
               count += pairs(i)._3 * pairs(j)._3
             }
           }

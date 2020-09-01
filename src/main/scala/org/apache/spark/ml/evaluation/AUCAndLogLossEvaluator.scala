@@ -12,6 +12,7 @@ import org.apache.spark.storage.StorageLevel
  * time: 2020/4/24 13:33
  * description:
  */
+@Deprecated
 class AUCAndLogLossEvaluator extends Serializable {
 
   private var labelColumnName: String = "label"
