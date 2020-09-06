@@ -82,6 +82,13 @@ class XGBoostBinaryClassifier extends Serializable {
     this
   }
 
+  private var lambda: Double = 1.0
+
+  def setLambda(value: Double): this.type = {
+    this.lambda = value
+    this
+  }
+
   private var spark: SparkSession = _
 
   private var xgboostModel: XGBoostClassificationModel = _
@@ -105,9 +112,13 @@ class XGBoostBinaryClassifier extends Serializable {
       .setTrainTestRatio(trainTestRatio)
 
       .setNumWorkers(numWorkers)
+
       .setNumRound(numRound)
-      .setMaxDepth(maxDepth)
       .setEta(eta)
+
+      .setMaxDepth(maxDepth)
+
+      .setLambda(lambda)
 
       .setMissing(0.0f)
       .setSeed(555L)
