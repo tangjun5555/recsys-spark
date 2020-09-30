@@ -229,7 +229,7 @@ class DeepWalk extends ItemEmbedding {
         })
     )
       .persist(StorageLevel.MEMORY_AND_DISK)
-    println(realRandomWalkPaths.count())
+    println(s"序列的数量:${this.realRandomWalkPaths.count()}")
 
     this
   }
