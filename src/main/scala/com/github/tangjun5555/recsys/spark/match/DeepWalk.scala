@@ -208,7 +208,10 @@ class DeepWalk extends ItemEmbedding {
               (vertexId, pathBuffer)
             }
             .filter(_._2.size >= 2)
+            .persist(StorageLevel.MEMORY_AND_DISK)
           buffer.append(randomWalk)
+          println(s"buffer.size:${buffer.size}")
+          println(s"randomWalk.count:${randomWalk.count()}")
           for (j <- 0.until(this.walkLength - 2)) {
             val randomWalk = buffer(buffer.size - 1)
               .map { case (srcNodeId, pathBuffer) =>
@@ -225,8 +228,11 @@ class DeepWalk extends ItemEmbedding {
                 }
                 (srcNodeId, pathBuffer)
               }
+              .persist(StorageLevel.MEMORY_AND_DISK)
             buffer.append(randomWalk)
             println(s"[${this.getClass.getSimpleName}.fit] finish walk, epoch:${i}, iter:${j}")
+            println(s"buffer.size:${buffer.size}")
+            println(s"randomWalk.count:${randomWalk.count()}")
           }
           buffer(buffer.size - 1)
         })
