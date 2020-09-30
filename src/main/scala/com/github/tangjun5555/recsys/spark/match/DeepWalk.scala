@@ -197,7 +197,8 @@ class DeepWalk extends ItemEmbedding {
     this.realRandomWalkPaths = spark.sparkContext.union(
       0.until(walkEpoch)
         .map(i => {
-          var randomWalk: RDD[(Long, ArrayBuffer[Long])] = graph.vertices
+          val buffer = new ArrayBuffer[RDD[(Long, ArrayBuffer[Long])]]()
+          val randomWalk: RDD[(Long, ArrayBuffer[Long])] = graph.vertices
             .map { case (vertexId: Long, nodeAttr: NodeAttr) =>
               val pathBuffer = new ArrayBuffer[Long]()
               pathBuffer.append(vertexId)
@@ -207,8 +208,9 @@ class DeepWalk extends ItemEmbedding {
               (vertexId, pathBuffer)
             }
             .filter(_._2.size >= 2)
+          buffer.append(randomWalk)
           for (j <- 0.until(this.walkLength - 2)) {
-            randomWalk = randomWalk
+            val randomWalk = buffer(buffer.size - 1)
               .map { case (srcNodeId, pathBuffer) =>
                 val prevNodeId = pathBuffer(pathBuffer.length - 2)
                 val currentNodeId = pathBuffer(pathBuffer.length - 1)
@@ -223,13 +225,16 @@ class DeepWalk extends ItemEmbedding {
                 }
                 (srcNodeId, pathBuffer)
               }
+            buffer.append(randomWalk)
             println(s"[${this.getClass.getSimpleName}.fit] finish walk, epoch:${i}, iter:${j}")
           }
-          randomWalk
+          buffer(buffer.size - 1)
         })
     )
       .persist(StorageLevel.MEMORY_AND_DISK)
+
     println(s"序列的数量:${this.realRandomWalkPaths.count()}")
+    println(this.realRandomWalkPaths.take(10).mkString("Array(", ", ", ")"))
 
     this
   }
