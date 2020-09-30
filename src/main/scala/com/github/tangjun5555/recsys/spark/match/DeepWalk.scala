@@ -194,39 +194,40 @@ class DeepWalk extends ItemEmbedding {
       }
       .persist(StorageLevel.MEMORY_AND_DISK)
 
-    this.realRandomWalkPaths = 0.until(walkEpoch)
-      .map(i => {
-        var randomWalk: RDD[(VertexId, ArrayBuffer[VertexId])] = graph.vertices
-          .map { case (vertexId: Long, nodeAttr: NodeAttr) =>
-            val pathBuffer = new ArrayBuffer[Long]()
-            pathBuffer.append(vertexId)
-            if (!nodeAttr.neighbors.isEmpty) {
-              pathBuffer.append(randomChoice(nodeAttr.neighbors))
-            }
-            (vertexId, pathBuffer)
-          }
-          .filter(_._2.size >= 2)
-        for (j <- 0.until(this.walkLength - 2)) {
-          randomWalk = randomWalk
-            .map { case (srcNodeId, pathBuffer) =>
-              val prevNodeId = pathBuffer(pathBuffer.length - 2)
-              val currentNodeId = pathBuffer(pathBuffer.length - 1)
-              (s"$prevNodeId$currentNodeId", (srcNodeId, pathBuffer))
-            }
-            .join(edge2Attr)
-            .map { case (_, ((srcNodeId, pathBuffer), edgeAttr)) =>
-              val dstNeighbors: Array[(VertexId, Double)] = edgeAttr.dstNeighbors
-              if (!dstNeighbors.isEmpty) {
-                val nextNodeId = randomChoice(edgeAttr.dstNeighbors)
-                pathBuffer.append(nextNodeId)
+    this.realRandomWalkPaths = spark.sparkContext.union(
+      0.until(walkEpoch)
+        .map(i => {
+          var randomWalk: RDD[(VertexId, ArrayBuffer[VertexId])] = graph.vertices
+            .map { case (vertexId: Long, nodeAttr: NodeAttr) =>
+              val pathBuffer = new ArrayBuffer[Long]()
+              pathBuffer.append(vertexId)
+              if (!nodeAttr.neighbors.isEmpty) {
+                pathBuffer.append(randomChoice(nodeAttr.neighbors))
               }
-              (srcNodeId, pathBuffer)
+              (vertexId, pathBuffer)
             }
-          println(s"[${this.getClass.getSimpleName}.fit] finish walk, epoch:${i}, iter:${j}")
-        }
-        randomWalk
-      })
-      .reduce(_.union(_))
+            .filter(_._2.size >= 2)
+          for (j <- 0.until(this.walkLength - 2)) {
+            randomWalk = randomWalk
+              .map { case (srcNodeId, pathBuffer) =>
+                val prevNodeId = pathBuffer(pathBuffer.length - 2)
+                val currentNodeId = pathBuffer(pathBuffer.length - 1)
+                (s"$prevNodeId$currentNodeId", (srcNodeId, pathBuffer))
+              }
+              .join(edge2Attr)
+              .map { case (_, ((srcNodeId, pathBuffer), edgeAttr)) =>
+                val dstNeighbors: Array[(VertexId, Double)] = edgeAttr.dstNeighbors
+                if (!dstNeighbors.isEmpty) {
+                  val nextNodeId = randomChoice(edgeAttr.dstNeighbors)
+                  pathBuffer.append(nextNodeId)
+                }
+                (srcNodeId, pathBuffer)
+              }
+            println(s"[${this.getClass.getSimpleName}.fit] finish walk, epoch:${i}, iter:${j}")
+          }
+          randomWalk
+        })
+    )
       .persist(StorageLevel.MEMORY_AND_DISK)
     println(realRandomWalkPaths.count())
 
