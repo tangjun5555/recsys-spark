@@ -89,6 +89,23 @@ class XGBoostBinaryClassifier extends Serializable {
     this
   }
 
+  /**
+   * 可选择depthwise, lossguide
+   */
+  private var growPolicy: String = "depthwise"
+
+  def setGrowPolicy(value: String): this.type = {
+    this.growPolicy = value
+    this
+  }
+
+  private var scalePosWeight: Double = 1.0
+
+  def setScalePosWeight(value: Double): this.type = {
+    this.scalePosWeight = value
+    this
+  }
+
   private var spark: SparkSession = _
 
   private var xgboostModel: XGBoostClassificationModel = _
@@ -119,6 +136,10 @@ class XGBoostBinaryClassifier extends Serializable {
       .setMaxDepth(maxDepth)
 
       .setLambda(lambda)
+
+      .setGrowPolicy(growPolicy)
+
+      .setScalePosWeight(scalePosWeight)
 
       .setMissing(0.0f)
       .setSeed(555L)
