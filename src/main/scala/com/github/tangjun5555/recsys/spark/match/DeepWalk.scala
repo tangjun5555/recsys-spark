@@ -197,7 +197,7 @@ class DeepWalk extends ItemEmbedding {
     this.realRandomWalkPaths = spark.sparkContext.union(
       0.until(walkEpoch)
         .map(i => {
-          var randomWalk: RDD[(VertexId, ArrayBuffer[VertexId])] = graph.vertices
+          var randomWalk: RDD[(Long, ArrayBuffer[Long])] = graph.vertices
             .map { case (vertexId: Long, nodeAttr: NodeAttr) =>
               val pathBuffer = new ArrayBuffer[Long]()
               pathBuffer.append(vertexId)
