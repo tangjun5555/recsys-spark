@@ -211,7 +211,7 @@ class DeepWalk extends ItemEmbedding {
             .persist(StorageLevel.MEMORY_AND_DISK)
           buffer.append(randomWalk)
           println(s"buffer.size:${buffer.size}")
-          println(s"randomWalk.count:${randomWalk.count()}")
+//          println(s"randomWalk.count:${randomWalk.count()}")
           for (j <- 0.until(this.walkLength - 2)) {
             val randomWalk = buffer(buffer.size - 1)
               .map { case (srcNodeId, pathBuffer) =>
