@@ -120,6 +120,7 @@ class DeepWalkV2 extends ItemEmbedding {
         buffer
       })
       .reduceByKey(_ + _)
+      .filter(row => !row._1._1.equals(row._1._2))
       .map(row => (row._1._1, (row._1._2, row._2)))
       .groupByKey()
       .map(row => (row._1, row._2.toSeq))
