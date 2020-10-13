@@ -133,11 +133,17 @@ class DeepWalkV2 extends ItemEmbedding {
       var j = 1
       while (j < walkLength) {
         walkPath = walkPath.map(row => (row.last, row))
-          .join(transferWeightRDD)
-          .map(row => row._2._1.++(Seq(randomChoice(row._2._2))))
+          .leftOuterJoin(transferWeightRDD)
+          .map(row => {
+            if (row._2._2.isDefined) {
+              row._2._1.++(Seq(randomChoice(row._2._2.get)))
+            } else {
+              row._2._1
+            }
+          })
         j += 1
+        println(s"[${this.getClass.getSimpleName}.fit] finish walk, epoch:${i}, iter:${j}")
       }
-      println(s"[${this.getClass.getSimpleName}.fit] finish walk, epoch:${i}, iter:${j}")
       walkPath
     })
       .reduce(_.union(_))
