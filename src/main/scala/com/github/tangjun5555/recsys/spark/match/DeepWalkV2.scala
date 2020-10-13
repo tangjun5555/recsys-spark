@@ -131,7 +131,13 @@ class DeepWalkV2 extends ItemEmbedding {
     this.realRandomWalkPaths = 0.until(walkEpoch).map(i => {
       var walkPath: RDD[Seq[String]] = transferWeightRDD.map(row => Seq(row._1))
       var j = 1
+      var preWalkPath: RDD[Seq[String]] = null
       while (j < walkLength) {
+        walkPath.cache()
+
+        preWalkPath = walkPath
+        println(s"[${this.getClass.getSimpleName}.fit], epoch:${i}, iter:${j}, preWalkPath:${preWalkPath.first().mkString(",")}")
+
         walkPath = walkPath.map(row => (row.last, row))
           .leftOuterJoin(transferWeightRDD)
           .map(row => {
@@ -143,6 +149,7 @@ class DeepWalkV2 extends ItemEmbedding {
           })
         j += 1
         println(s"[${this.getClass.getSimpleName}.fit] finish walk, epoch:${i}, iter:${j}")
+        preWalkPath.unpersist(blocking = false)
       }
       walkPath
     })
