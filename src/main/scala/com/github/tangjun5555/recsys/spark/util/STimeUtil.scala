@@ -1,7 +1,7 @@
 package com.github.tangjun5555.recsys.spark.util
 
-import java.time.{Instant, LocalDate, LocalDateTime, ZoneId}
 import java.time.format.DateTimeFormatter
+import java.time.{Instant, LocalDate, LocalDateTime, ZoneId}
 
 /**
  * author: tangj 1844250138@qq.com
@@ -9,6 +9,10 @@ import java.time.format.DateTimeFormatter
  * description:
  */
 object STimeUtil {
+
+  def getCurrentDateTime(): String = {
+    LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+  }
 
   def getCurrentDate(formatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyyMMdd")): String = {
     LocalDate.now().format(formatter)
@@ -30,6 +34,8 @@ object STimeUtil {
     println(computeDiffDate(getCurrentDate(), -10))
 
     println(timestamp2DateTime(1592241927766L))
+
+    println(getCurrentDateTime())
   }
 
 }

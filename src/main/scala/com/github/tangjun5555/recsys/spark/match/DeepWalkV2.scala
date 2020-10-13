@@ -1,5 +1,6 @@
 package com.github.tangjun5555.recsys.spark.`match`
 
+import com.github.tangjun5555.recsys.spark.util.STimeUtil
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.storage.StorageLevel
@@ -99,9 +100,9 @@ class DeepWalkV2 extends ItemEmbedding {
     dataDF.show(30, false)
 
     // 统计基本信息
-    println(s"[${this.getClass.getSimpleName}.fit] dataDF.size:${dataDF.count()}")
-    println(s"[${this.getClass.getSimpleName}.fit] dataDF.user.size:${dataDF.select(userColumnName).distinct().count()}")
-    println(s"[${this.getClass.getSimpleName}.fit] dataDF.item.size:${dataDF.select(itemColumnName).distinct().count()}")
+    println(s"${STimeUtil.getCurrentDateTime()} ${this.getClass.getSimpleName}.fit, dataDF.size:${dataDF.count()}")
+    println(s"${STimeUtil.getCurrentDateTime()} ${this.getClass.getSimpleName}.fit, dataDF.user.size:${dataDF.select(userColumnName).distinct().count()}")
+    println(s"${STimeUtil.getCurrentDateTime()} ${this.getClass.getSimpleName}.fit, dataDF.item.size:${dataDF.select(itemColumnName).distinct().count()}")
 
     // 物品之间的转移权重
     val transferWeightRDD: RDD[(String, Seq[(String, Double)])] = dataDF.rdd
@@ -125,7 +126,7 @@ class DeepWalkV2 extends ItemEmbedding {
       .groupByKey()
       .map(row => (row._1, row._2.toSeq))
       .persist(StorageLevel.MEMORY_AND_DISK)
-    println(s"[${this.getClass.getSimpleName}.fit], transferWeightRDD.count:${transferWeightRDD.count()}")
+    println(s"${STimeUtil.getCurrentDateTime()} ${this.getClass.getSimpleName}.fit, transferWeightRDD.count:${transferWeightRDD.count()}")
 
     this.realRandomWalkPaths = 0.until(walkEpoch).map(i => {
       var walkPath: RDD[Seq[String]] = transferWeightRDD.map(row => Seq(row._1))
@@ -135,7 +136,7 @@ class DeepWalkV2 extends ItemEmbedding {
         walkPath.cache()
 
         preWalkPath = walkPath
-        println(s"[${this.getClass.getSimpleName}.fit], epoch:${i}, iter:${j}, preWalkPath:${preWalkPath.first().mkString(",")}")
+        println(s"${STimeUtil.getCurrentDateTime()} ${this.getClass.getSimpleName}.fit, epoch:${i}, iter:${j}, preWalkPath:${preWalkPath.first().mkString(",")}")
 
         walkPath = walkPath.map(row => (row.last, row))
           .leftOuterJoin(transferWeightRDD)
@@ -147,14 +148,14 @@ class DeepWalkV2 extends ItemEmbedding {
             }
           })
         j += 1
-        println(s"[${this.getClass.getSimpleName}.fit] finish walk, epoch:${i}, iter:${j}")
+        println(s"${STimeUtil.getCurrentDateTime()} ${this.getClass.getSimpleName}.fit, finish walk, epoch:${i}, iter:${j}")
         preWalkPath.unpersist(blocking = false)
       }
       walkPath
     })
       .reduce(_.union(_))
       .persist(StorageLevel.MEMORY_AND_DISK)
-    println(s"[${this.getClass.getSimpleName}.fit] realRandomWalkPaths.count:${realRandomWalkPaths.count()}")
+    println(s"${STimeUtil.getCurrentDateTime()} ${this.getClass.getSimpleName}.fit, realRandomWalkPaths.count:${realRandomWalkPaths.count()}")
 
     this
   }
