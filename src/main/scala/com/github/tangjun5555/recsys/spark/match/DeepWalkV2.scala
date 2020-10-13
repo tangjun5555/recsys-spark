@@ -127,6 +127,7 @@ class DeepWalkV2 extends ItemEmbedding {
       .groupByKey()
       .map(row => (row._1, row._2.toSeq))
       .persist(StorageLevel.MEMORY_AND_DISK)
+    println(s"[${this.getClass.getSimpleName}.fit], transferWeightRDD.count:${transferWeightRDD.count()}")
 
     this.realRandomWalkPaths = 0.until(walkEpoch).map(i => {
       var walkPath: RDD[Seq[String]] = transferWeightRDD.map(row => Seq(row._1))
