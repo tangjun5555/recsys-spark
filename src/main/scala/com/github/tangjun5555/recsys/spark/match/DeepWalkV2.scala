@@ -95,10 +95,7 @@ class DeepWalkV2 extends ItemEmbedding {
     val spark = rawDataDF.sparkSession
     this.spark = spark
 
-    this.dataDF = rawDataDF.select(userColumnName, itemColumnName, ratingColumnName, timestampColumnName)
-      .filter(s"${ratingColumnName}>0.0")
-      .distinct()
-      .persist(StorageLevel.MEMORY_AND_DISK)
+    this.dataDF = rawDataDF.persist(StorageLevel.MEMORY_AND_DISK)
     dataDF.show(30, false)
 
     // 统计基本信息
