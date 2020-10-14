@@ -1,7 +1,7 @@
 package com.github.tangjun5555.recsys.spark.util
 
 import org.apache.log4j.{Level, Logger}
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
 
 /**
  * author: tangjun 1844250138@qq.com
@@ -58,8 +58,8 @@ object SparkUtil {
    */
   def writeDF2TFRecords(df: DataFrame, path: String): Unit = {
     df.write
+      .mode(SaveMode.Overwrite)
       .format("tfrecords")
-      .mode("overwrite")
       .option("recordType", "Example")
       .save(path)
   }

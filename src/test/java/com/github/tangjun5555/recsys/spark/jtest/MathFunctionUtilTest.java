@@ -11,6 +11,18 @@ import org.junit.Test;
 public class MathFunctionUtilTest {
 
     @Test
+    public void test2() {
+        System.out.println(MathFunctionUtil.walsonCtr(1.0, 10.0, 1.96));
+        System.out.println(MathFunctionUtil.walsonCtr(10.0, 100.0, 1.96));
+        System.out.println(MathFunctionUtil.walsonCtr(100.0, 1000.0, 1.96));
+
+        System.out.println(MathFunctionUtil.walsonCtr(1, 1, 1.96));
+        System.out.println(MathFunctionUtil.walsonCtr(10, 10, 1.96));
+        System.out.println(MathFunctionUtil.walsonCtr(100, 100, 1.96));
+        System.out.println(MathFunctionUtil.walsonCtr(2000, 1000, 1.96));
+    }
+
+    @Test
     public void test() {
         System.out.println(MathFunctionUtil.binaryLogLoss(0.0, 0.001));
         System.out.println(MathFunctionUtil.binaryLogLoss(0.0, 0.7));
