@@ -56,12 +56,20 @@ object SparkUtil {
    * @param df
    * @param path
    */
-  def writeDF2TFRecords(df: DataFrame, path: String): Unit = {
-    df.write
-      .mode(SaveMode.Overwrite)
-      .format("tfrecords")
-      .option("recordType", "Example")
-      .save(path)
+  def writeDF2TFRecords(df: DataFrame, path: String, mode: String = "append"): Unit = {
+    if ("append".equals(mode)) {
+      df.write
+        .mode(SaveMode.Append)
+        .format("tfrecords")
+        .option("recordType", "Example")
+        .save(path)
+    } else {
+      df.write
+        .mode(SaveMode.Overwrite)
+        .format("tfrecords")
+        .option("recordType", "Example")
+        .save(path)
+    }
   }
 
 }
