@@ -23,32 +23,16 @@ class AUCEvaluator extends Serializable {
     this
   }
 
-  private var sampleWeightColumnName: String = ""
-
-  def setSampleWeightColumnName(value: String): this.type = {
-    this.sampleWeightColumnName = value
-    this
-  }
-
   def evaluate(predictions: DataFrame): Double = {
     val scoreAndLabel = predictions.rdd
       .map(row =>
-        if ("".equals(sampleWeightColumnName) || sampleWeightColumnName == null) {
-          (
-            row.getAs[Double](predictionColumnName)
-            , row.getAs[Double](labelColumnName)
-            , 1.0
-          )
-        } else {
-          (
-            row.getAs[Double](predictionColumnName)
-            , row.getAs[Double](labelColumnName)
-            , row.getAs[Double](sampleWeightColumnName)
-          )
-        }
+        (
+          row.getAs[Double](predictionColumnName)
+          , row.getAs[Double](labelColumnName)
+          , 1.0
+        )
       )
       .collect()
-//      .sortBy(x => (x._1, 1.0 - x._2))
       .sortBy(x => (x._1, x._2))
 
     if (scoreAndLabel.map(_._2).distinct.length == 1) {

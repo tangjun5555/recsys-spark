@@ -26,29 +26,14 @@ class LogLossEvaluator extends Serializable {
     this
   }
 
-  private var sampleWeightColumnName: String = ""
-
-  def setSampleWeightColumnName(value: String): this.type = {
-    this.sampleWeightColumnName = value
-    this
-  }
-
   def evaluate(predictions: DataFrame): Double = {
     val scoreAndLabel: RDD[(Double, Double, Double)] = predictions.rdd
       .map(row =>
-        if ("".equals(sampleWeightColumnName) || sampleWeightColumnName == null) {
-          (
-            row.getAs[Double](predictionColumnName)
-            , row.getAs[Double](labelColumnName)
-            , 1.0
-          )
-        } else {
-          (
-            row.getAs[Double](predictionColumnName)
-            , row.getAs[Double](labelColumnName)
-            , row.getAs[Double](sampleWeightColumnName)
-          )
-        }
+        (
+          row.getAs[Double](predictionColumnName)
+          , row.getAs[Double](labelColumnName)
+          , 1.0
+        )
       )
       .persist(StorageLevel.MEMORY_AND_DISK)
     val numSamples: Double = scoreAndLabel.map(_._3).sum()
