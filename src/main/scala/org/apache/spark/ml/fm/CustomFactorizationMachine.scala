@@ -6,8 +6,8 @@ import org.apache.spark.ml.linalg.Vector
 import org.apache.spark.mllib.linalg
 import org.apache.spark.mllib.optimization.{GradientDescent, LBFGS, Optimizer}
 import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 import org.apache.spark.sql.functions.{col, udf}
+import org.apache.spark.sql.{DataFrame, Dataset, Row, SparkSession}
 import org.apache.spark.storage.StorageLevel
 
 import scala.util.Random
@@ -19,7 +19,7 @@ import scala.util.Random
  */
 class CustomFactorizationMachine extends Serializable {
 
-  private var spark: SparkSession = null
+  private var spark: SparkSession = _
 
   private var labelColumnName: String = "label"
 
@@ -83,6 +83,7 @@ class CustomFactorizationMachine extends Serializable {
 
   /**
    * 可用 GradientDescent、LBFGS
+   *
    * @param value
    * @return
    */
@@ -335,14 +336,12 @@ class CustomFactorizationMachine extends Serializable {
   }
 
   /**
-   * 预测
    *
    * @param rawDataDF
    * @return
    */
   def predict(rawDataDF: DataFrame): DataFrame = {
     this.spark = rawDataDF.sparkSession
-
     if (this.fmModel.isDefined) {
       val predictCol = udf(
         (features: Vector) => this.fmModel.get.predict(linalg.Vectors.fromML(features))
@@ -359,7 +358,7 @@ class CustomFactorizationMachine extends Serializable {
     val factorDim = this.factorDim
     val numFeatures = (modelWeithgs.length - 1) / (factorDim + 1)
     val bias: Double = modelWeithgs.head.split(":")(1).trim.toDouble
-    val firstOrder: Seq[Double] =  0.until(numFeatures).map(i => {
+    val firstOrder: Seq[Double] = 0.until(numFeatures).map(i => {
       modelWeithgs(1 + i).split(":")(1).trim.toDouble
     })
     val secondOrder: Seq[Double] = 0.until(numFeatures).flatMap(i => {
@@ -381,16 +380,13 @@ class CustomFactorizationMachine extends Serializable {
         s"i_${i}: ${weights(1 + i)}"
       })
       val secondOrder = 0.until(numFeatures).map(i => {
-        s"v_${i}: ${weights.slice((1 + numFeatures) + i * factorDim, (1 + numFeatures) + (i+1) * factorDim).mkString(" ")}"
+        s"v_${i}: ${weights.slice((1 + numFeatures) + i * factorDim, (1 + numFeatures) + (i + 1) * factorDim).mkString(" ")}"
       })
-
       this.spark.sparkContext.makeRDD(Seq(bias).++(firstOrder).++(secondOrder), 1).saveAsTextFile(modelFilePath)
     } else {
       throw new Exception(s"${this.getClass.getSimpleName} this is not fit before.")
     }
-
     this
   }
-
 
 }
