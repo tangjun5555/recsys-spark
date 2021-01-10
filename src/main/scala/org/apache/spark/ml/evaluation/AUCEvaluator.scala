@@ -33,9 +33,10 @@ class AUCEvaluator extends Serializable {
         )
       )
       .collect()
-      .sortBy(x => (x._1, x._2))
+      // 严格模式，正样本的预测概率要大于负样本
+      .sortBy(x => (x._1, 1.0 - x._2))
 
-    if (scoreAndLabel.map(_._2).distinct.length == 1) {
+    if (scoreAndLabel.map(_._2).distinct.length <= 1) {
       0.5
     } else {
       val posNum: Double = scoreAndLabel.filter(_._2 == 1.0).map(_._3).sum

@@ -33,12 +33,12 @@ class GAUCEvaluator extends Serializable {
     this
   }
 
-  private var sampleWeightColumnName: String = ""
-
-  def setSampleWeightColumnName(value: String): this.type = {
-    this.sampleWeightColumnName = value
-    this
-  }
+  //  private var sampleWeightColumnName: String = ""
+  //
+  //  def setSampleWeightColumnName(value: String): this.type = {
+  //    this.sampleWeightColumnName = value
+  //    this
+  //  }
 
   def evaluate(predictions: DataFrame): Double = {
     val spark: SparkSession = predictions.sparkSession
@@ -46,21 +46,27 @@ class GAUCEvaluator extends Serializable {
 
     val dataDF: DataFrame = predictions.rdd
       .map(row =>
-        if ("".equals(sampleWeightColumnName) || sampleWeightColumnName == null) {
-          (
-            row.getAs[String](groupColumnName)
-            , row.getAs[Double](predictionColumnName)
-            , row.getAs[Double](labelColumnName)
-            , 1.0
-          )
-        } else {
-          (
-            row.getAs[String](groupColumnName)
-            , row.getAs[Double](predictionColumnName)
-            , row.getAs[Double](labelColumnName)
-            , row.getAs[Double](sampleWeightColumnName)
-          )
-        }
+        //        if ("".equals(sampleWeightColumnName) || sampleWeightColumnName == null) {
+        //          (
+        //            row.getAs[String](groupColumnName)
+        //            , row.getAs[Double](predictionColumnName)
+        //            , row.getAs[Double](labelColumnName)
+        //            , 1.0
+        //          )
+        //        } else {
+        //          (
+        //            row.getAs[String](groupColumnName)
+        //            , row.getAs[Double](predictionColumnName)
+        //            , row.getAs[Double](labelColumnName)
+        //            , row.getAs[Double](sampleWeightColumnName)
+        //          )
+        //        }
+        (
+          row.getAs[String](groupColumnName)
+          , row.getAs[Double](predictionColumnName)
+          , row.getAs[Double](labelColumnName)
+          , 1.0
+        )
       )
       .toDF(groupColumnName, predictionColumnName, labelColumnName, "sample_weight")
       .persist(StorageLevel.MEMORY_AND_DISK)
@@ -90,21 +96,23 @@ class GAUCEvaluator extends Serializable {
         ((groupId, groupWeight), (prediction, label, sampleWeight))
       })
       .groupByKey()
-      .map(row => { // 计算每个group的AUC
+      // 计算每个group的AUC
+      .map(row => {
         val pairs: Seq[(Double, Double, Double)] = row._2.toSeq
-          //          .sortBy(_._1)
-          .sortBy(x => (x._1, x._2))
+          .sortBy(x => (x._1, 1.0 - x._2))
           .reverse
+        val positiveNum = pairs.filter(_._2 == 1.0).map(_._3).sum
+        val negativeNum = pairs.filter(_._2 == 0.0).map(_._3).sum
         var count = 0.0
+        // 假设每个组的样本量较少，采用两层循环，便于理解
         for (i <- 0.until(pairs.size - 1) if pairs(i)._2 == 1.0) {
           for (j <- (i + 1).until(pairs.size) if pairs(j)._2 == 0.0) {
-            if (pairs(i)._1 >= pairs(j)._1) {
+            // 严格模式，正样本的预测概率要大于负样本
+            if (pairs(i)._1 > pairs(j)._1) {
               count += pairs(i)._3 * pairs(j)._3
             }
           }
         }
-        val positiveNum = pairs.filter(_._2 == 1.0).map(_._3).sum
-        val negativeNum = pairs.filter(_._2 == 0.0).map(_._3).sum
         val groupAuc = count / (positiveNum * negativeNum)
         (row._1._2, row._1._2 * groupAuc)
       })
