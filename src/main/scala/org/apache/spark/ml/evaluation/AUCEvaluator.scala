@@ -1,13 +1,15 @@
 package org.apache.spark.ml.evaluation
 
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.ml.param.ParamMap
+import org.apache.spark.ml.util.Identifiable
+import org.apache.spark.sql.Dataset
 
 /**
  * author: tangj 1844250138@qq.com
  * time: 2020/8/31 12:11 下午
  * description:
  */
-class AUCEvaluator extends Serializable {
+class AUCEvaluator extends Evaluator {
 
   private var labelColumnName: String = "label"
 
@@ -23,8 +25,8 @@ class AUCEvaluator extends Serializable {
     this
   }
 
-  def evaluate(predictions: DataFrame): Double = {
-    val scoreAndLabel = predictions.rdd
+  override def evaluate(dataset: Dataset[_]): Double = {
+    val scoreAndLabel = dataset.select(labelColumnName, predictionColumnName).rdd
       .map(row =>
         (
           row.getAs[Double](predictionColumnName)
@@ -54,4 +56,9 @@ class AUCEvaluator extends Serializable {
     }
   }
 
+  override def copy(extra: ParamMap): Evaluator = {
+    this
+  }
+
+  override val uid: String = Identifiable.randomUID("AUCEvaluator")
 }
