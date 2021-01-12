@@ -34,19 +34,19 @@ class CPMSensitiveAUCEvaluator extends Evaluator {
   }
 
   override def evaluate(dataset: Dataset[_]): Double = {
-    val tuples = dataset.select(labelColumnName, predictionColumnName, bidColumnName)
+    val tuples = dataset
+      .select(labelColumnName, predictionColumnName, bidColumnName)
       .rdd
-      .map(row => (
-        row.getAs[Double](labelColumnName), row.getAs[Double](predictionColumnName), row.getAs[Double](bidColumnName))
-      )
+      .map(row => (row.getAs[Double](labelColumnName), row.getAs[Double](predictionColumnName), row.getAs[Double](bidColumnName)))
       .collect()
       .toSeq
+
     if (tuples.length <= 1) {
       0.0
     } else {
       var t1 = 0.0
       var t2 = 0.0
-      val posTuples = tuples.filter(x => x._1 == 1.0).sortBy(x => (x._2, x._3))
+      val posTuples = tuples.filter(x => x._1 == 1.0).sortBy(x => x._3)
       val negTuples = tuples.filter(x => x._1 == 0.0)
 
       for (i <- posTuples.indices) {
@@ -58,7 +58,7 @@ class CPMSensitiveAUCEvaluator extends Evaluator {
         }
       }
 
-      for (i <- 1.until(posTuples.length - 1)) {
+      for (i <- 0.until(posTuples.length - 1)) {
         for (j <- (i + 1).until(posTuples.length)) {
           t2 += posTuples(j)._3
           if (posTuples(j)._2 > posTuples(i)._2) {
