@@ -7,6 +7,7 @@ import org.apache.spark.storage.StorageLevel
  * author: tangj 1844250138@qq.com
  * time: 2020/5/3 10:56
  * description: Group AUC
+ * Reference: Deep Interest Network for Click-Through Rate Prediction
  * group一般可以设置为user_id、session_id
  *
  */
@@ -33,12 +34,13 @@ class GAUCEvaluator extends Serializable {
     this
   }
 
-  //  private var sampleWeightColumnName: String = ""
-  //
-  //  def setSampleWeightColumnName(value: String): this.type = {
-  //    this.sampleWeightColumnName = value
-  //    this
-  //  }
+  private var groupWeightMode: String = "count"
+
+  def setGroupWeightMode(value: String): this.type = {
+    assert(Seq("count", "num").contains(value), "value must be count or num")
+    this.groupWeightMode = value
+    this
+  }
 
   def evaluate(predictions: DataFrame): Double = {
     val spark: SparkSession = predictions.sparkSession
@@ -46,21 +48,6 @@ class GAUCEvaluator extends Serializable {
 
     val dataDF: DataFrame = predictions.rdd
       .map(row =>
-        //        if ("".equals(sampleWeightColumnName) || sampleWeightColumnName == null) {
-        //          (
-        //            row.getAs[String](groupColumnName)
-        //            , row.getAs[Double](predictionColumnName)
-        //            , row.getAs[Double](labelColumnName)
-        //            , 1.0
-        //          )
-        //        } else {
-        //          (
-        //            row.getAs[String](groupColumnName)
-        //            , row.getAs[Double](predictionColumnName)
-        //            , row.getAs[Double](labelColumnName)
-        //            , row.getAs[Double](sampleWeightColumnName)
-        //          )
-        //        }
         (
           row.getAs[String](groupColumnName)
           , row.getAs[Double](predictionColumnName)
@@ -73,13 +60,22 @@ class GAUCEvaluator extends Serializable {
     dataDF.createOrReplaceTempView(s"GAUCEvaluator_data")
 
     // 计算每个group的权重
+    //    val groupWeightDF: DataFrame = spark.sql(
+    //      s"""
+    //         |select ${groupColumnName}
+    //         |  , sum(sample_weight) ${groupColumnName}_weight
+    //         |from GAUCEvaluator_data
+    //         |group by ${groupColumnName}
+    //         |having count(distinct ${labelColumnName})>=2
+    //         |"""
+    //        .stripMargin
+    //    )
     val groupWeightDF: DataFrame = spark.sql(
       s"""
          |select ${groupColumnName}
          |  , sum(sample_weight) ${groupColumnName}_weight
          |from GAUCEvaluator_data
          |group by ${groupColumnName}
-         |having count(distinct ${labelColumnName})>=2
          |"""
         .stripMargin
     )
@@ -88,7 +84,11 @@ class GAUCEvaluator extends Serializable {
       .rdd
       .map(row => {
         val groupId = row.getAs[String](groupColumnName)
-        val groupWeight = row.getAs[Double](groupColumnName + "_weight")
+        val groupWeight = if ("count".equals(groupWeightMode)) {
+          1.0
+        } else {
+          row.getAs[Double](groupColumnName + "_weight")
+        }
         val prediction = row.getAs[Double](predictionColumnName)
         val label = row.getAs[Double](labelColumnName)
         val sampleWeight = row.getAs[Double]("sample_weight")
