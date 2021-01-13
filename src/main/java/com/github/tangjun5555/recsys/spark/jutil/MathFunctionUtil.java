@@ -63,20 +63,20 @@ public class MathFunctionUtil {
     /**
      * 计算Recall@N
      *
-     * @param labels   不重复元素组合
-     * @param predicts 不重复元素组合
-     * @param num
+     * @param labels   真实集合
+     * @param predicts 预测集合
+     * @param k
      * @return
      */
-    public static double computeRecRecallRate(List<String> labels, List<String> predicts, int num) {
-        assert !CollectionUtils.isEmpty(labels);
-        assert num > 0;
+    public static double computeRecRecallRate(List<String> labels, List<String> predicts, int k) {
+        assert labels != null;
+        assert k > 0;
 
         double result = 0.0;
         if (!CollectionUtils.isEmpty(predicts)) {
             Set<String> validItems = new HashSet<>();
-            if (predicts.size() >= num) {
-                predicts = predicts.subList(0, num);
+            if (predicts.size() >= k) {
+                predicts = predicts.subList(0, k);
             }
             for (String item : predicts) {
                 if (labels.contains(item)) {
@@ -84,6 +84,34 @@ public class MathFunctionUtil {
                 }
             }
             result = (1.0 * validItems.size()) / labels.size();
+        }
+        return result;
+    }
+
+    /**
+     * 计算Precision@N
+     *
+     * @param labels   真实集合
+     * @param predicts 预测集合
+     * @param k
+     * @return
+     */
+    public static double computeRecPrecisionRate(List<String> labels, List<String> predicts, int k) {
+        assert labels != null;
+        assert k > 0;
+
+        double result = 0.0;
+        if (!CollectionUtils.isEmpty(predicts)) {
+            Set<String> validItems = new HashSet<>();
+            if (predicts.size() >= k) {
+                predicts = predicts.subList(0, k);
+            }
+            for (String item : predicts) {
+                if (labels.contains(item)) {
+                    validItems.add(item);
+                }
+            }
+            result = (1.0 * validItems.size()) / k;
         }
         return result;
     }
