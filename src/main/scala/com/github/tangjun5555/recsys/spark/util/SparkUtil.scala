@@ -56,7 +56,7 @@ object SparkUtil {
    * @param df
    * @param path
    */
-  def writeDF2TFRecords(df: DataFrame, path: String, mode: String = "append"): Unit = {
+  def writeDF2TFRecords(df: DataFrame, path: String, mode: String = "overwrite"): Unit = {
     if ("append".equals(mode)) {
       df.write
         .mode(SaveMode.Append)
