@@ -60,16 +60,6 @@ class GAUCEvaluator extends Serializable {
     dataDF.createOrReplaceTempView(s"GAUCEvaluator_data")
 
     // 计算每个group的权重
-    //    val groupWeightDF: DataFrame = spark.sql(
-    //      s"""
-    //         |select ${groupColumnName}
-    //         |  , sum(sample_weight) ${groupColumnName}_weight
-    //         |from GAUCEvaluator_data
-    //         |group by ${groupColumnName}
-    //         |having count(distinct ${labelColumnName})>=2
-    //         |"""
-    //        .stripMargin
-    //    )
     val groupWeightDF: DataFrame = spark.sql(
       s"""
          |select ${groupColumnName}
@@ -80,7 +70,7 @@ class GAUCEvaluator extends Serializable {
         .stripMargin
     )
 
-    val result = dataDF.join(groupWeightDF, Seq(groupColumnName), "inner")
+    val result: (Double, Double) = dataDF.join(groupWeightDF, Seq(groupColumnName), "inner")
       .rdd
       .map(row => {
         val groupId = row.getAs[String](groupColumnName)
@@ -98,26 +88,29 @@ class GAUCEvaluator extends Serializable {
       .groupByKey()
       // 计算每个group的AUC
       .map(row => {
-        val pairs: Seq[(Double, Double, Double)] = row._2.toSeq
-          .sortBy(x => (x._1, 1.0 - x._2))
-          .reverse
-        val positiveNum = pairs.filter(_._2 == 1.0).map(_._3).sum
-        val negativeNum = pairs.filter(_._2 == 0.0).map(_._3).sum
-        var count = 0.0
-        // 假设每个组的样本量较少，采用两层循环，便于理解
-        for (i <- 0.until(pairs.size - 1) if pairs(i)._2 == 1.0) {
-          for (j <- (i + 1).until(pairs.size) if pairs(j)._2 == 0.0) {
-            // 严格模式，正样本的预测概率要大于负样本
-            if (pairs(i)._1 > pairs(j)._1) {
-              count += pairs(i)._3 * pairs(j)._3
+        if (row._2.toSeq.map(_._2).distinct.size != 2) {
+          (row._1._2, 0.0)
+        } else {
+          val pairs: Seq[(Double, Double, Double)] = row._2.toSeq
+            .sortBy(x => (x._1, 1.0 - x._2))
+            .reverse
+          val positiveNum = pairs.filter(_._2 == 1.0).map(_._3).sum
+          val negativeNum = pairs.filter(_._2 == 0.0).map(_._3).sum
+          var count = 0.0
+          // 假设每个组的样本量较少，采用两层循环，便于理解
+          for (i <- 0.until(pairs.size - 1) if pairs(i)._2 == 1.0) {
+            for (j <- (i + 1).until(pairs.size) if pairs(j)._2 == 0.0) {
+              // 严格模式，正样本的预测概率要大于负样本
+              if (pairs(i)._1 > pairs(j)._1) {
+                count += pairs(i)._3 * pairs(j)._3
+              }
             }
           }
+          val groupAuc = count / (positiveNum * negativeNum)
+          (row._1._2, groupAuc)
         }
-        val groupAuc = count / (positiveNum * negativeNum)
-        (row._1._2, row._1._2 * groupAuc)
       })
       .reduce((x, y) => (x._1 + y._1, x._2 + y._2))
-
     result._2 / result._1
   }
 
