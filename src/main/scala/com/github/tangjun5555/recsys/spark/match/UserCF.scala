@@ -8,9 +8,24 @@ import org.apache.spark.storage.StorageLevel
 import scala.collection.mutable.ArrayBuffer
 
 /**
- * author: tangj
+ * author: tangj 1844250138@qq.com
  * time: 2020/1/2 18:36
  * description: 基于用户的协同过滤
+ *
+ * implicitPrefs
+ * 1、true 隐性反馈
+ * 如电商购买、信息流点击等, rating只取一个值, 如1.0
+ * 相似算法选择jaccard
+ * 2、false 显性反馈
+ * 用户的真实评分, 如豆瓣评分、电商购物评分
+ * 相似算法选择cosine
+ *
+ * 适用场景:
+ * 1、物品时效性较高的推荐场景，如资讯信息流、视频信息流
+ *
+ * 运行效率优化:
+ * 1、构建共现对
+ * 2、增量计算
  *
  */
 class UserCF extends U2IMatch {

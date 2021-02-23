@@ -8,7 +8,7 @@ import org.apache.spark.storage.StorageLevel
 import scala.collection.mutable.ArrayBuffer
 
 /**
- * author: tangj
+ * author: tangj 1844250138@qq.com
  * time: 2020/1/2 18:35
  * description: 基于物品的协同过滤
  *
@@ -20,15 +20,12 @@ import scala.collection.mutable.ArrayBuffer
  * 用户的真实评分, 如豆瓣评分、电商购物评分
  * 相似算法选择cosine
  *
- * 相似度算法的选择:
- * 1、Jaccard, 适用于只有只关注一种正向反馈行为的场景，如信息流点击等, rating只取1.0
- * 2、cosine, 适用于评分等级的场景, rating最小值设置1.0
- *
  * 适用场景:
  * 1、物品时效性不高的推荐场景，如电商、广告推荐等
  *
- * TODO List:
- * 1、热门物品、冷门物品的处理
+ * 运行效率优化:
+ * 1、构建共现对
+ * 2、增量计算
  *
  */
 class ItemCF extends I2IMatch with U2IMatch {

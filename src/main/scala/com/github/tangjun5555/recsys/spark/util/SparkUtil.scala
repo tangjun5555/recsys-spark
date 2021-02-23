@@ -10,12 +10,16 @@ import org.apache.spark.sql.{DataFrame, SaveMode, SparkSession}
  */
 object SparkUtil {
 
-  def getSparkSession(name: String, cores: Int = 3, logLevel: Level = Level.INFO, driverMemory: String = "2g"): SparkSession = {
+  def getSparkSession(name: String, mode: String = "local", cores: Int = 3, logLevel: Level = Level.INFO, driverMemory: String = "2g"): SparkSession = {
     if (System.getProperties.getProperty("os.name").contains("Windows")
       || System.getProperties.getProperty("os.name").contains("Mac OS")) {
       getLocalSparkSession(name, logLevel, cores, driverMemory)
     } else {
-      getClusterSparkSession(name, logLevel)
+      if ("local".equals(mode)) {
+        getLocalSparkSession(name, logLevel, cores, driverMemory)
+      } else {
+        getClusterSparkSession(name, logLevel)
+      }
     }
   }
 
@@ -37,16 +41,6 @@ object SparkUtil {
       .builder()
       .appName(name)
       .enableHiveSupport()
-      .getOrCreate()
-  }
-
-  def getODPSSparkSession(name: String, logLevel: Level = Level.INFO): SparkSession = {
-    Logger.getLogger("org.apache.spark").setLevel(logLevel)
-    SparkSession
-      .builder()
-      .appName(name)
-      .config("odps.exec.dynamic.partition.mode", "nonstrict")
-      .config("spark.sql.catalogImplementation", "odps")
       .getOrCreate()
   }
 
