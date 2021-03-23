@@ -7,7 +7,7 @@ import org.apache.spark.storage.StorageLevel
 /**
  * author: tangjun 1844250138@qq.com
  * time: 2020/2/16 16:01
- * description:
+ * description: 基于模型协同过滤的召回
  *
  * 显示反馈的损失函数:
  *

@@ -9,9 +9,9 @@ import org.apache.spark.sql.functions.{col, udf}
 import org.apache.spark.storage.StorageLevel
 
 /**
- * author: tangj
+ * author: tangj 1844250138@qq.com
  * time: 2020/5/16 18:37
- * description:
+ * description: FM召回
  */
 class FMMatch extends UserEmbedding with ItemEmbedding {
 

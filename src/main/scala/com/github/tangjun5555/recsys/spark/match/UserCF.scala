@@ -10,7 +10,7 @@ import scala.collection.mutable.ArrayBuffer
 /**
  * author: tangj 1844250138@qq.com
  * time: 2020/1/2 18:36
- * description: 基于用户的协同过滤
+ * description: 基于用户协同过滤的召回 U2U2I
  *
  * implicitPrefs
  * 1、true 隐性反馈
