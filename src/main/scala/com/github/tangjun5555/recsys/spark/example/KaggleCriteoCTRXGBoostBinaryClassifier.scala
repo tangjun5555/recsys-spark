@@ -5,7 +5,6 @@ import com.github.tangjun5555.recsys.spark.rank.XGBoostBinaryClassifier
 import com.github.tangjun5555.recsys.spark.util.SparkUtil
 import org.apache.log4j.Level
 import org.apache.spark.broadcast.Broadcast
-import org.apache.spark.ml.evaluation.AUCAndLogLossEvaluator
 import org.apache.spark.sql.{DataFrame, SaveMode}
 import org.apache.spark.sql.types.{DoubleType, IntegerType, StringType, StructField, StructType}
 import org.apache.spark.storage.StorageLevel
@@ -170,12 +169,12 @@ object KaggleCriteoCTRXGBoostBinaryClassifier {
     val trainPreDF = model.predict(trainDF)
     val validPreDF = model.predict(validDF)
 
-    val evaluator = new AUCAndLogLossEvaluator()
-    val (trainLogLoss, trainAUC) = evaluator.evaluate(trainPreDF)
-    val (validLogLoss, validAUC) = evaluator.evaluate(validPreDF)
+//    val evaluator = new AUCAndLogLossEvaluator()
+//    val (trainLogLoss, trainAUC) = evaluator.evaluate(trainPreDF)
+//    val (validLogLoss, validAUC) = evaluator.evaluate(validPreDF)
 
-    println(s"trainLogLoss:${trainLogLoss}, trainAUC:${trainAUC}")
-    println(s"validLogLoss:${validLogLoss}, validAUC:${validAUC}")
+//    println(s"trainLogLoss:${trainLogLoss}, trainAUC:${trainAUC}")
+//    println(s"validLogLoss:${validLogLoss}, validAUC:${validAUC}")
 
     val endTime = JavaTimeUtil.getCurrentDateTime
     println(s"startTime:${startTime}, endTime:${endTime}")

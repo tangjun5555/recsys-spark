@@ -2,7 +2,6 @@ package com.github.tangjun5555.recsys.spark.stest
 
 import com.github.tangjun5555.recsys.spark.rank.XGBoostBinaryClassifier
 import com.github.tangjun5555.recsys.spark.util.SparkUtil
-import org.apache.spark.ml.evaluation.AUCAndLogLossEvaluator
 import org.apache.spark.ml.linalg.Vectors
 import org.apache.spark.storage.StorageLevel
 
@@ -54,12 +53,12 @@ object XGBoostBinaryClassifierTest {
     trainPreDF.show(10, false)
     validPreDF.show(10, false)
 
-    val evaluator = new AUCAndLogLossEvaluator()
-    val (trainLogLoss, trainAUC) = evaluator.evaluate(trainPreDF)
-    val (validLogLoss, validAUC) = evaluator.evaluate(validPreDF)
-
-    println(s"trainLogLoss:${trainLogLoss}, trainAUC:${trainAUC}")
-    println(s"validLogLoss:${validLogLoss}, validAUC:${validAUC}")
+//    val evaluator = new AUCAndLogLossEvaluator()
+//    val (trainLogLoss, trainAUC) = evaluator.evaluate(trainPreDF)
+//    val (validLogLoss, validAUC) = evaluator.evaluate(validPreDF)
+//
+//    println(s"trainLogLoss:${trainLogLoss}, trainAUC:${trainAUC}")
+//    println(s"validLogLoss:${validLogLoss}, validAUC:${validAUC}")
 
     Thread.sleep(1000 * 1000)
     spark.stop()

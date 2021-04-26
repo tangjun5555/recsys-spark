@@ -1,6 +1,6 @@
 package org.apache.spark.ml.evaluation
 
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 import org.apache.spark.storage.StorageLevel
 
 /**
@@ -11,7 +11,7 @@ import org.apache.spark.storage.StorageLevel
  * group一般可以设置为user_id、session_id
  *
  */
-class GAUCEvaluator extends Serializable {
+class GAUCEvaluator extends BinaryClassifierEvaluator {
 
   private var groupColumnName: String = "group_id"
 
@@ -20,21 +20,7 @@ class GAUCEvaluator extends Serializable {
     this
   }
 
-  private var labelColumnName: String = "label"
-
-  def setLabelColumnName(value: String): this.type = {
-    this.labelColumnName = value
-    this
-  }
-
-  private var predictionColumnName: String = "prediction"
-
-  def setPredictionColumnName(value: String): this.type = {
-    this.predictionColumnName = value
-    this
-  }
-
-  private var groupWeightMode: String = "count"
+  private var groupWeightMode: String = "num"
 
   def setGroupWeightMode(value: String): this.type = {
     assert(Seq("count", "num").contains(value), "value must be count or num")
@@ -42,11 +28,11 @@ class GAUCEvaluator extends Serializable {
     this
   }
 
-  def evaluate(predictions: DataFrame): Double = {
-    val spark: SparkSession = predictions.sparkSession
+  def evaluate(dataset: Dataset[_]): Double = {
+    val spark: SparkSession = dataset.sparkSession
     import spark.implicits._
 
-    val dataDF: DataFrame = predictions.rdd
+    val dataDF: DataFrame = dataset.toDF().rdd
       .map(row =>
         (
           row.getAs[String](groupColumnName)
@@ -86,10 +72,9 @@ class GAUCEvaluator extends Serializable {
         ((groupId, groupWeight), (prediction, label, sampleWeight))
       })
       .groupByKey()
-      // 计算每个group的AUC
       .map(row => {
         if (row._2.toSeq.map(_._2).distinct.size != 2) {
-          (row._1._2, 0.0)
+          (row._1._2, 0.5)
         } else {
           val pairs: Seq[(Double, Double, Double)] = row._2.toSeq
             .sortBy(x => (x._1, 1.0 - x._2))
@@ -97,12 +82,12 @@ class GAUCEvaluator extends Serializable {
           val positiveNum = pairs.filter(_._2 == 1.0).map(_._3).sum
           val negativeNum = pairs.filter(_._2 == 0.0).map(_._3).sum
           var count = 0.0
-          // 假设每个组的样本量较少，采用两层循环，便于理解
           for (i <- 0.until(pairs.size - 1) if pairs(i)._2 == 1.0) {
             for (j <- (i + 1).until(pairs.size) if pairs(j)._2 == 0.0) {
-              // 严格模式，正样本的预测概率要大于负样本
               if (pairs(i)._1 > pairs(j)._1) {
                 count += pairs(i)._3 * pairs(j)._3
+              } else if (pairs(i)._1.equals(pairs(j)._1)) {
+                count += 0.5 * pairs(i)._3 * pairs(j)._3
               }
             }
           }

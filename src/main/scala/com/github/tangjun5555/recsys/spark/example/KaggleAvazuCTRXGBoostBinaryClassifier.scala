@@ -4,9 +4,7 @@ import com.github.tangjun5555.recsys.spark.jutil.JavaTimeUtil
 import com.github.tangjun5555.recsys.spark.rank.XGBoostBinaryClassifier
 import com.github.tangjun5555.recsys.spark.util.SparkUtil
 import org.apache.spark.broadcast.Broadcast
-import org.apache.spark.ml.evaluation.AUCAndLogLossEvaluator
-import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.apache.spark.sql.types.{StringType, StructField, StructType}
+import org.apache.spark.sql.SparkSession
 import org.apache.spark.storage.StorageLevel
 
 import scala.collection.mutable.ArrayBuffer
@@ -38,7 +36,7 @@ object KaggleAvazuCTRXGBoostBinaryClassifier {
     val rawDataTableName = args(0)
     val modelSavePath = args(1)
 
-    val spark: SparkSession = SparkUtil.getODPSSparkSession(appName)
+    val spark: SparkSession = SparkUtil.getSparkSession(appName)
     import spark.implicits._
 
     spark.udf.register("getEventDate", getEventDate _)
@@ -139,12 +137,12 @@ object KaggleAvazuCTRXGBoostBinaryClassifier {
     val validPreDF = model.predict(validDF)
     trainPreDF.show(50, false)
 
-    val evaluator = new AUCAndLogLossEvaluator()
-    val (trainLogLoss, trainAUC) = evaluator.evaluate(trainPreDF)
-    val (validLogLoss, validAUC) = evaluator.evaluate(validPreDF)
-
-    println(s"trainLogLoss:${trainLogLoss}, trainAUC:${trainAUC}")
-    println(s"validLogLoss:${validLogLoss}, validAUC:${validAUC}")
+    //    val evaluator = new AUCAndLogLossEvaluator()
+    //    val (trainLogLoss, trainAUC) = evaluator.evaluate(trainPreDF)
+    //    val (validLogLoss, validAUC) = evaluator.evaluate(validPreDF)
+    //
+    //    println(s"trainLogLoss:${trainLogLoss}, trainAUC:${trainAUC}")
+    //    println(s"validLogLoss:${validLogLoss}, validAUC:${validAUC}")
 
     model.save(modelSavePath)
 
