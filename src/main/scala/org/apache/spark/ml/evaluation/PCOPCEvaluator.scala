@@ -10,7 +10,7 @@ import org.apache.spark.sql.Dataset
 class PCOPCEvaluator extends BinaryClassifierEvaluator {
 
   override def evaluate(dataset: Dataset[_]): Double = {
-    dataset.toDF().rdd.map(_.getAs[Double](predictionColumnName)).sum() / dataset.toDF().rdd.map(_.getAs[Double](labelColumnName)).sum()
+    dataset.toDF().rdd.map(_.getAs[Double](predictionCol)).sum() / dataset.toDF().rdd.map(_.getAs[Double](labelCol)).sum()
   }
 
 }

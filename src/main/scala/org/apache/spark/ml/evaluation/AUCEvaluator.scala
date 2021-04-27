@@ -11,8 +11,8 @@ class AUCEvaluator extends BinaryClassifierEvaluator {
 
   override def evaluate(dataset: Dataset[_]): Double = {
     new BinaryClassificationEvaluator()
-      .setLabelCol(labelColumnName)
-      .setRawPredictionCol(predictionColumnName)
+      .setLabelCol(labelCol)
+      .setRawPredictionCol(predictionCol)
       .setMetricName("areaUnderROC")
       .evaluate(dataset)
   }

@@ -36,12 +36,12 @@ class GAUCEvaluator extends BinaryClassifierEvaluator {
       .map(row =>
         (
           row.getAs[String](groupColumnName)
-          , row.getAs[Double](predictionColumnName)
-          , row.getAs[Double](labelColumnName)
+          , row.getAs[Double](predictionCol)
+          , row.getAs[Double](labelCol)
           , 1.0
         )
       )
-      .toDF(groupColumnName, predictionColumnName, labelColumnName, "sample_weight")
+      .toDF(groupColumnName, predictionCol, labelCol, "sample_weight")
       .persist(StorageLevel.MEMORY_AND_DISK)
     dataDF.createOrReplaceTempView(s"GAUCEvaluator_data")
 
@@ -65,8 +65,8 @@ class GAUCEvaluator extends BinaryClassifierEvaluator {
         } else {
           row.getAs[Double](groupColumnName + "_weight")
         }
-        val prediction = row.getAs[Double](predictionColumnName)
-        val label = row.getAs[Double](labelColumnName)
+        val prediction = row.getAs[Double](predictionCol)
+        val label = row.getAs[Double](labelCol)
         val sampleWeight = row.getAs[Double]("sample_weight")
 
         ((groupId, groupWeight), (prediction, label, sampleWeight))

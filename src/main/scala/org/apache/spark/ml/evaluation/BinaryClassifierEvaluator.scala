@@ -11,17 +11,17 @@ import org.apache.spark.sql.Dataset
  */
 trait BinaryClassifierEvaluator extends Evaluator {
 
-  protected var labelColumnName: String = "label"
+  protected var labelCol: String = "label"
 
-  def setLabelColumnName(value: String): this.type = {
-    this.labelColumnName = value
+  def setLabelCol(value: String): this.type = {
+    this.labelCol = value
     this
   }
 
-  protected var predictionColumnName: String = "prediction"
+  protected var predictionCol: String = "prediction"
 
-  def setPredictionColumnName(value: String): this.type = {
-    this.predictionColumnName = value
+  def setPredictionCol(value: String): this.type = {
+    this.predictionCol = value
     this
   }
 

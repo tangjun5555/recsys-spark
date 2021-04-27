@@ -13,11 +13,11 @@ import org.apache.spark.storage.StorageLevel
 class LogLossEvaluator extends BinaryClassifierEvaluator {
 
   override def evaluate(dataset: Dataset[_]): Double = {
-    val scoreAndLabel: RDD[(Double, Double, Double)] = dataset.select(labelColumnName, predictionColumnName).rdd
+    val scoreAndLabel: RDD[(Double, Double, Double)] = dataset.select(labelCol, predictionCol).rdd
       .map(row =>
         (
-          row.getAs[Double](predictionColumnName)
-          , row.getAs[Double](labelColumnName)
+          row.getAs[Double](predictionCol)
+          , row.getAs[Double](labelCol)
           , 1.0
         )
       )
