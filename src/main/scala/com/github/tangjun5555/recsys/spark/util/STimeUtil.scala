@@ -28,14 +28,4 @@ object STimeUtil {
     formatter.format(LocalDateTime.ofInstant(Instant.ofEpochMilli(value), ZoneId.systemDefault()))
   }
 
-  def main(args: Array[String]): Unit = {
-    println(getCurrentDate())
-
-    println(computeDiffDate(getCurrentDate(), -10))
-
-    println(timestamp2DateTime(1592241927766L))
-
-    println(getCurrentDateTime())
-  }
-
 }

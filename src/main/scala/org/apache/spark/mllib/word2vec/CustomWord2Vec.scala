@@ -1,4 +1,4 @@
-package org.apache.spark.mllib
+package org.apache.spark.mllib.word2vec
 
 /**
  * author: tangj
@@ -6,16 +6,7 @@ package org.apache.spark.mllib
  * description: 自定义实现Word2Vec
  */
 
-import java.lang.{Iterable => JavaIterable}
-
-import scala.collection.JavaConverters._
-import scala.collection.mutable
-
 import com.github.fommil.netlib.BLAS.{getInstance => blas}
-import org.json4s.DefaultFormats
-import org.json4s.JsonDSL._
-import org.json4s.jackson.JsonMethods._
-
 import org.apache.spark.SparkContext
 import org.apache.spark.annotation.Since
 import org.apache.spark.api.java.JavaRDD
@@ -25,9 +16,15 @@ import org.apache.spark.mllib.linalg.{Vector, Vectors}
 import org.apache.spark.mllib.util.{Loader, Saveable}
 import org.apache.spark.rdd._
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.util.BoundedPriorityQueue
-import org.apache.spark.util.Utils
 import org.apache.spark.util.random.XORShiftRandom
+import org.apache.spark.util.{BoundedPriorityQueue, Utils}
+import org.json4s.DefaultFormats
+import org.json4s.JsonDSL._
+import org.json4s.jackson.JsonMethods._
+
+import java.lang.{Iterable => JavaIterable}
+import scala.collection.JavaConverters._
+import scala.collection.mutable
 
 /**
  *  Entry in vocabulary
