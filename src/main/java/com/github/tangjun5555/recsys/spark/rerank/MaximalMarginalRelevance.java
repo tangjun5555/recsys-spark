@@ -61,7 +61,7 @@ public class MaximalMarginalRelevance extends Diversity {
                         maxSimItemDegree = tmpSimItemDegree;
                     }
                 }
-                System.out.println("sim " + i + "&" + maxSimItem + ":");
+                // 综合相关性得分与相似度得分
                 double mmrScoreTmp = lambda * qualityScoresMap.get(i) - (1 - lambda) * maxSimItemDegree;
                 if (Objects.isNull(mmrScore)) {
                     mmrScore = mmrScoreTmp;
