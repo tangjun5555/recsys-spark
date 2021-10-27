@@ -54,7 +54,7 @@ public class MaximalMarginalRelevance extends Diversity {
                     }
                 }
                 System.out.println("sim " + i + "&" + maxSimItem + ":");
-                double mmrScoreTmp =  lambda * (qualityScoresMap.get(i) - (1 - lambda) * maxSimItemDegree);
+                double mmrScoreTmp = lambda * (qualityScoresMap.get(i) - (1 - lambda) * maxSimItemDegree);
                 if (Objects.isNull(mmrScore)) {
                     mmrScore = mmrScoreTmp;
                     selectItem = i;
