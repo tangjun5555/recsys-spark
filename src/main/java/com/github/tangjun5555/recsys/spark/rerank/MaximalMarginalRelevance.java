@@ -3,16 +3,24 @@ package com.github.tangjun5555.recsys.spark.rerank;
 import java.util.*;
 
 /**
- * author: tangj 1844250138@qq.com
+ * @author: tangj 1844250138@qq.com
  * time: 2021/10/27 4:18 下午
  * description: MMR
  */
 public class MaximalMarginalRelevance extends Diversity {
 
-    private final double lambda;
+    private double lambda = 0.5;
+
+    public MaximalMarginalRelevance() {
+
+    }
 
     public MaximalMarginalRelevance(double lambda) {
-        this.lambda = lambda;
+        if (lambda <= 1.0 && lambda >= 0.0) {
+            this.lambda = lambda;
+        } else {
+            System.err.println("lambda must in [0.0, 1.0].");
+        }
     }
 
     @Override
@@ -54,7 +62,7 @@ public class MaximalMarginalRelevance extends Diversity {
                     }
                 }
                 System.out.println("sim " + i + "&" + maxSimItem + ":");
-                double mmrScoreTmp = lambda * (qualityScoresMap.get(i) - (1 - lambda) * maxSimItemDegree);
+                double mmrScoreTmp = lambda * qualityScoresMap.get(i) - (1 - lambda) * maxSimItemDegree;
                 if (Objects.isNull(mmrScore)) {
                     mmrScore = mmrScoreTmp;
                     selectItem = i;
