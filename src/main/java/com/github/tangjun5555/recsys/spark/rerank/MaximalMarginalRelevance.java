@@ -9,7 +9,7 @@ import java.util.*;
  */
 public class MaximalMarginalRelevance extends Diversity {
 
-    private double lambda;
+    private final double lambda;
 
     public MaximalMarginalRelevance(double lambda) {
         this.lambda = lambda;
