@@ -30,7 +30,7 @@ public class MaximalMarginalRelevance extends Diversity {
         int itemSize = itemIds.length;
         Map<String, Double> qualityScoresMap = new HashMap<>(itemSize);
         Map<String, Integer> itemIndexMap = new HashMap<>(itemSize);
-        for (int i = 1; i < itemSize; i++) {
+        for (int i = 0; i < itemSize; i++) {
             qualityScoresMap.put(itemIds[i], qualityScores[i]);
             itemIndexMap.put(itemIds[i], i);
         }
