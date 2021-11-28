@@ -7,7 +7,7 @@ import org.apache.spark.storage.StorageLevel
 /**
  * author: tangj 1844250138@qq.com
  * time: 2020/11/8 5:38 下午
- * description:
+ * description: Normalized Discounted Cumulative Gain
  */
 class NDCGEvaluator extends Serializable {
 
