@@ -7,7 +7,7 @@ import org.apache.spark.storage.StorageLevel
 /**
  * author: tangj 1844250138@qq.com
  * time: 2020/11/8 5:37 下午
- * description:
+ * description: Mean Average Precision
  */
 class MAPEvaluator extends Serializable {
 
@@ -52,8 +52,7 @@ class MAPEvaluator extends Serializable {
         val labelCount: Double = seq
           .sortBy(x => x._1)(Ordering(Ordering.Double.reverse))
           .slice(0, k)
-          .map(_._1)
-          .sum
+          .count(x => x._1 > 0.0)
 
         if (labelCount == 0.0) {
           (groupId, 0.0)
@@ -61,12 +60,12 @@ class MAPEvaluator extends Serializable {
           val tmp: Seq[(Double, Double)] = seq
             .sortBy(x => x._2)(Ordering(Ordering.Double.reverse))
             .slice(0, k)
-          val precision: Seq[Double] = tmp.indices
-            .map(i => tmp.slice(0, i + 1).map(_._1).sum / labelCount)
           val ap = tmp.indices
-            .filter(i => tmp(i)._1 == 1.0)
-            .map(i => precision(i))
-            .sum / k
+            .filter(i => tmp(i)._1 > 0.0)
+            .map(i => {
+              tmp.slice(0, i + 1).count(x => x._1 > 0.0) / (i + 1)
+            })
+            .sum / labelCount
           (groupId, ap)
         }
       })
@@ -74,17 +73,6 @@ class MAPEvaluator extends Serializable {
     val count = r1RDD.count()
     assert(count > 0)
     r1RDD.map(_._2).sum() / count
-  }
-
-  def computeAP(position: Int, label: Int): Double = {
-    assert(Seq(0, 1).contains(label))
-    assert(position > 0)
-    if (label == 0) {
-      0.0
-    } else {
-      val tmp = math.log(1 + position) / math.log(2)
-      1.0 / tmp
-    }
   }
 
 }
