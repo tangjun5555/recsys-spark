@@ -69,12 +69,6 @@
             <version>1.15.0</version>
             <scope>provided</scope>
         </dependency>
-
-        <dependency>
-            <groupId>org.jpmml</groupId>
-            <artifactId>jpmml-sparkml</artifactId>
-            <version>1.4.16</version>
-        </dependency>
     </dependencies>
 
     <build>

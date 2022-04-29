@@ -6,17 +6,14 @@ Implementation of commonly used recommendation system algorithm based on spark.
 ## Mathch Algorithm
 ### ItemCF 
 ### UserCF
-### FunkSVD
-### TagPreference
 ### Swing
+### FunkSVD
 ### Item2Vec
 ### DeepWalk
 ### Node2Vec
 
 ## Rank Algorithm
-### FactorizationMachine
 ### XGBoostBinaryClassifier
-
 
 # Usage
 It's a maven project.
