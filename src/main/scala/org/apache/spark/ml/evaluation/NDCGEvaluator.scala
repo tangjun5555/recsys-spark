@@ -7,7 +7,7 @@ import org.apache.spark.storage.StorageLevel
 /**
  * author: tangj 1844250138@qq.com
  * time: 2020/11/8 5:38 下午
- * description:
+ * description: Normalized Discounted Cumulative Gain
  */
 class NDCGEvaluator extends Serializable {
 
@@ -73,14 +73,11 @@ class NDCGEvaluator extends Serializable {
   }
 
   private def computeDCG(position: Int, label: Int): Double = {
-    assert(Seq(0, 1).contains(label))
+    assert(label >= 0)
     assert(position > 0)
-    if (label == 0) {
-      0.0
-    } else {
-      val tmp = math.log(1 + position) / math.log(2)
-      1.0 / tmp
-    }
+    val discount = math.log(1 + position) / math.log(2)
+    val gain = math.pow(2, label) - 1.0
+    gain / discount
   }
 
 }

@@ -1,6 +1,5 @@
 package com.github.tangjun5555.recsys.spark.`match`
 
-import org.apache.spark.mllib.CustomWord2VecModel
 import org.apache.spark.mllib.word2vec.{CustomWord2Vec, CustomWord2VecModel}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.storage.StorageLevel
