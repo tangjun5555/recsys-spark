@@ -18,6 +18,10 @@ public class JavaTimeUtil {
     public static DateTimeFormatter formatter2 = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     public static DateTimeFormatter formatter3 = DateTimeFormatter.ofPattern("yyyyMMdd");
 
+    public static String getCurrentDt() {
+        return LocalDate.now().format(formatter3);
+    }
+
     /**
      * 计算两个时间点相隔的秒数
      * @param start
